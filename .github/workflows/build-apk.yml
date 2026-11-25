@@ -11,6 +11,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: unzip -o ashrah-android-github.zip -d project
+      - run: |
+          cat << 'EOF' >> project/app/build.gradle
+          dependencies {
+              implementation platform('org.jetbrains.kotlin:kotlin-bom:1.8.22')
+          }
+          EOF
       - uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
@@ -31,4 +37,3 @@ jobs:
           name: تطبيق عشرة v3.54
           files: Ashrah-v3.54.apk
           make_latest: true
-          
