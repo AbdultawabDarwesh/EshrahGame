@@ -21,6 +21,366 @@ jobs:
               implementation platform('org.jetbrains.kotlin:kotlin-bom:1.8.22')
           }
           EOF
+      - name: Patch Android System Bars
+        run: |
+          python3 - << 'PYEOF'
+          import os, re, sys
+
+          MARKER = "ASHRAH_SYSTEM_BARS_BRIDGE_V1"
+
+          JAVA_HELPERS = """
+              /* ASHRAH_SYSTEM_BARS_BRIDGE_V1 */
+              private android.view.View ashrahStatusBarBg;
+              private android.view.View ashrahNavBarBg;
+              private int ashrahTopColor = android.graphics.Color.parseColor("#faf2db");
+              private int ashrahBottomColor = android.graphics.Color.parseColor("#f0eadc");
+
+              private void setupAshrahSystemBars(android.webkit.WebView webView) {
+                  try {
+                      setupAshrahEdgeToEdgeIfNeeded();
+                      applyAshrahBarColors("#faf2db", "#f0eadc", true);
+                      if (webView != null) {
+                          webView.addJavascriptInterface(new AshrahSystemBarsBridge(), "AshrahSystemBars");
+                      }
+                  } catch (Exception ignored) {}
+              }
+
+              private void setupAshrahEdgeToEdgeIfNeeded() {
+                  if (android.os.Build.VERSION.SDK_INT < 35) return;
+                  try {
+                      final android.view.Window window = getWindow();
+                      if (window == null) return;
+                      final android.view.View decor = window.getDecorView();
+                      if (!(decor instanceof android.widget.FrameLayout)) return;
+                      final android.widget.FrameLayout decorFrame = (android.widget.FrameLayout) decor;
+                      final android.view.View contentView = findViewById(android.R.id.content);
+
+                      if (ashrahStatusBarBg == null) {
+                          ashrahStatusBarBg = new android.view.View(this);
+                          ashrahStatusBarBg.setClickable(false);
+                          ashrahStatusBarBg.setFocusable(false);
+                          ashrahStatusBarBg.setBackgroundColor(ashrahTopColor);
+                          decorFrame.addView(
+                              ashrahStatusBarBg,
+                              new android.widget.FrameLayout.LayoutParams(
+                                  android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                                  0,
+                                  android.view.Gravity.TOP
+                              )
+                          );
+                      }
+                      if (ashrahNavBarBg == null) {
+                          ashrahNavBarBg = new android.view.View(this);
+                          ashrahNavBarBg.setClickable(false);
+                          ashrahNavBarBg.setFocusable(false);
+                          ashrahNavBarBg.setBackgroundColor(ashrahBottomColor);
+                          decorFrame.addView(
+                              ashrahNavBarBg,
+                              new android.widget.FrameLayout.LayoutParams(
+                                  android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                                  0,
+                                  android.view.Gravity.BOTTOM
+                              )
+                          );
+                      }
+
+                      decorFrame.setOnApplyWindowInsetsListener((v, insets) -> {
+                          android.graphics.Insets bars = insets.getInsets(android.view.WindowInsets.Type.systemBars());
+                          if (ashrahStatusBarBg != null) {
+                              android.view.ViewGroup.LayoutParams lp = ashrahStatusBarBg.getLayoutParams();
+                              if (lp.height != bars.top) {
+                                  lp.height = bars.top;
+                                  ashrahStatusBarBg.setLayoutParams(lp);
+                              }
+                          }
+                          if (ashrahNavBarBg != null) {
+                              android.view.ViewGroup.LayoutParams lp = ashrahNavBarBg.getLayoutParams();
+                              if (lp.height != bars.bottom) {
+                                  lp.height = bars.bottom;
+                                  ashrahNavBarBg.setLayoutParams(lp);
+                              }
+                          }
+                          if (contentView != null) {
+                              contentView.setPadding(bars.left, bars.top, bars.right, bars.bottom);
+                          }
+                          return v.onApplyWindowInsets(insets);
+                      });
+                      decorFrame.requestApplyInsets();
+                  } catch (Exception ignored) {}
+              }
+
+              private int parseAshrahHex(String hex, int fallback) {
+                  try {
+                      if (hex != null && !hex.trim().isEmpty()) {
+                          return android.graphics.Color.parseColor(hex.trim());
+                      }
+                  } catch (Exception ignored) {}
+                  return fallback;
+              }
+
+              private void applyAshrahBarColors(final String topHex, final String bottomHex, final boolean isLight) {
+                  final int topColor = parseAshrahHex(topHex, ashrahTopColor);
+                  final int bottomColor = parseAshrahHex(bottomHex, ashrahBottomColor);
+                  ashrahTopColor = topColor;
+                  ashrahBottomColor = bottomColor;
+
+                  runOnUiThread(() -> {
+                      try {
+                          android.view.Window window = getWindow();
+                          if (window == null) return;
+                          if (android.os.Build.VERSION.SDK_INT >= 21) {
+                              window.clearFlags(
+                                  android.view.WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS |
+                                  android.view.WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION
+                              );
+                              window.addFlags(android.view.WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+                              window.setStatusBarColor(topColor);
+                              window.setNavigationBarColor(bottomColor);
+                          }
+                          if (android.os.Build.VERSION.SDK_INT >= 29) {
+                              window.setNavigationBarContrastEnforced(false);
+                          }
+                          android.view.View decor = window.getDecorView();
+                          if (decor != null) {
+                              decor.setBackgroundColor(bottomColor);
+                              if (android.os.Build.VERSION.SDK_INT >= 30) {
+                                  android.view.WindowInsetsController ctrl = window.getInsetsController();
+                                  if (ctrl != null) {
+                                      int mask = android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS |
+                                                 android.view.WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS;
+                                      ctrl.setSystemBarsAppearance(isLight ? mask : 0, mask);
+                                  }
+                              } else if (android.os.Build.VERSION.SDK_INT >= 23) {
+                                  int flags = decor.getSystemUiVisibility();
+                                  if (isLight) {
+                                      flags |= android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+                                      if (android.os.Build.VERSION.SDK_INT >= 26) {
+                                          flags |= android.view.View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+                                      }
+                                  } else {
+                                      flags &= ~android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+                                      if (android.os.Build.VERSION.SDK_INT >= 26) {
+                                          flags &= ~android.view.View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+                                      }
+                                  }
+                                  decor.setSystemUiVisibility(flags);
+                              }
+                          }
+                          if (ashrahStatusBarBg != null) ashrahStatusBarBg.setBackgroundColor(topColor);
+                          if (ashrahNavBarBg != null) ashrahNavBarBg.setBackgroundColor(bottomColor);
+                      } catch (Exception ignored) {}
+                  });
+              }
+
+              public class AshrahSystemBarsBridge {
+                  @android.webkit.JavascriptInterface
+                  public void setColors(final String topHex, final String bottomHex, final boolean isLight) {
+                      applyAshrahBarColors(topHex, bottomHex, isLight);
+                  }
+              }
+          """
+
+          KOTLIN_HELPERS = """
+              /* ASHRAH_SYSTEM_BARS_BRIDGE_V1 */
+              private var ashrahStatusBarBg: android.view.View? = null
+              private var ashrahNavBarBg: android.view.View? = null
+              private var ashrahTopColor: Int = android.graphics.Color.parseColor("#faf2db")
+              private var ashrahBottomColor: Int = android.graphics.Color.parseColor("#f0eadc")
+
+              private fun setupAshrahSystemBars(webView: android.webkit.WebView?) {
+                  try {
+                      setupAshrahEdgeToEdgeIfNeeded()
+                      applyAshrahBarColors("#faf2db", "#f0eadc", true)
+                      webView?.addJavascriptInterface(AshrahSystemBarsBridge(), "AshrahSystemBars")
+                  } catch (_: Exception) {}
+              }
+
+              private fun setupAshrahEdgeToEdgeIfNeeded() {
+                  if (android.os.Build.VERSION.SDK_INT < 35) return
+                  try {
+                      val w = window ?: return
+                      val decorFrame = w.decorView as? android.widget.FrameLayout ?: return
+                      val contentView = findViewById<android.view.View>(android.R.id.content)
+
+                      if (ashrahStatusBarBg == null) {
+                          ashrahStatusBarBg = android.view.View(this).apply {
+                              isClickable = false
+                              isFocusable = false
+                              setBackgroundColor(ashrahTopColor)
+                          }
+                          decorFrame.addView(
+                              ashrahStatusBarBg,
+                              android.widget.FrameLayout.LayoutParams(
+                                  android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                                  0,
+                                  android.view.Gravity.TOP
+                              )
+                          )
+                      }
+                      if (ashrahNavBarBg == null) {
+                          ashrahNavBarBg = android.view.View(this).apply {
+                              isClickable = false
+                              isFocusable = false
+                              setBackgroundColor(ashrahBottomColor)
+                          }
+                          decorFrame.addView(
+                              ashrahNavBarBg,
+                              android.widget.FrameLayout.LayoutParams(
+                                  android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                                  0,
+                                  android.view.Gravity.BOTTOM
+                              )
+                          )
+                      }
+
+                      decorFrame.setOnApplyWindowInsetsListener { v, insets ->
+                          val bars = insets.getInsets(android.view.WindowInsets.Type.systemBars())
+                          ashrahStatusBarBg?.let { bar ->
+                              val lp = bar.layoutParams
+                              if (lp.height != bars.top) {
+                                  lp.height = bars.top
+                                  bar.layoutParams = lp
+                              }
+                          }
+                          ashrahNavBarBg?.let { bar ->
+                              val lp = bar.layoutParams
+                              if (lp.height != bars.bottom) {
+                                  lp.height = bars.bottom
+                                  bar.layoutParams = lp
+                              }
+                          }
+                          contentView?.setPadding(bars.left, bars.top, bars.right, bars.bottom)
+                          v.onApplyWindowInsets(insets)
+                      }
+                      decorFrame.requestApplyInsets()
+                  } catch (_: Exception) {}
+              }
+
+              private fun parseAshrahHex(hex: String?, fallback: Int): Int {
+                  return try {
+                      if (!hex.isNullOrBlank()) android.graphics.Color.parseColor(hex.trim()) else fallback
+                  } catch (_: Exception) { fallback }
+              }
+
+              private fun applyAshrahBarColors(topHex: String?, bottomHex: String?, isLight: Boolean) {
+                  val topColor = parseAshrahHex(topHex, ashrahTopColor)
+                  val bottomColor = parseAshrahHex(bottomHex, ashrahBottomColor)
+                  ashrahTopColor = topColor
+                  ashrahBottomColor = bottomColor
+
+                  runOnUiThread {
+                      try {
+                          val w = window ?: return@runOnUiThread
+                          if (android.os.Build.VERSION.SDK_INT >= 21) {
+                              w.clearFlags(
+                                  android.view.WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS or
+                                  android.view.WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION
+                              )
+                              w.addFlags(android.view.WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
+                              w.statusBarColor = topColor
+                              w.navigationBarColor = bottomColor
+                          }
+                          if (android.os.Build.VERSION.SDK_INT >= 29) {
+                              w.isNavigationBarContrastEnforced = false
+                          }
+                          val decor = w.decorView
+                          decor.setBackgroundColor(bottomColor)
+                          if (android.os.Build.VERSION.SDK_INT >= 30) {
+                              val ctrl = w.insetsController
+                              if (ctrl != null) {
+                                  val mask = android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or
+                                             android.view.WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
+                                  ctrl.setSystemBarsAppearance(if (isLight) mask else 0, mask)
+                              }
+                          } else if (android.os.Build.VERSION.SDK_INT >= 23) {
+                              @Suppress("DEPRECATION")
+                              var flags = decor.systemUiVisibility
+                              @Suppress("DEPRECATION")
+                              if (isLight) {
+                                  flags = flags or android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+                                  if (android.os.Build.VERSION.SDK_INT >= 26) {
+                                      flags = flags or android.view.View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
+                                  }
+                              } else {
+                                  flags = flags and android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR.inv()
+                                  if (android.os.Build.VERSION.SDK_INT >= 26) {
+                                      flags = flags and android.view.View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR.inv()
+                                  }
+                              }
+                              @Suppress("DEPRECATION")
+                              decor.systemUiVisibility = flags
+                          }
+                          ashrahStatusBarBg?.setBackgroundColor(topColor)
+                          ashrahNavBarBg?.setBackgroundColor(bottomColor)
+                      } catch (_: Exception) {}
+                  }
+              }
+
+              inner class AshrahSystemBarsBridge {
+                  @android.webkit.JavascriptInterface
+                  fun setColors(topHex: String?, bottomHex: String?, isLight: Boolean) {
+                      applyAshrahBarColors(topHex, bottomHex, isLight)
+                  }
+              }
+          """
+
+          target = None
+          for root_name in ["project/app/src/main/java", "project/app/src/main/kotlin"]:
+              if not os.path.isdir(root_name):
+                  continue
+              for dp, _, fns in os.walk(root_name):
+                  for fn in fns:
+                      if fn.endswith((".java", ".kt")):
+                          p = os.path.join(dp, fn)
+                          with open(p, "r", encoding="utf-8") as f:
+                              txt = f.read()
+                          if "loadUrl(" in txt:
+                              target = p
+                              break
+                  if target:
+                      break
+              if target:
+                  break
+
+          if not target:
+              print("❌ لم يتم العثور على ملف Activity يحتوي على loadUrl داخل project/app/src/main")
+              sys.exit(1)
+
+          with open(target, "r", encoding="utf-8") as f:
+              src = f.read()
+
+          if MARKER in src:
+              print(f"ℹ️ جسر AshrahSystemBars مثبّت بالفعل في {target}")
+              sys.exit(0)
+
+          is_kt = target.endswith(".kt")
+          semi = "" if is_kt else ";"
+
+          m = re.search(r'^([ \t]*)([a-zA-Z0-9_.]+)\.loadUrl\(', src, re.MULTILINE)
+          if m:
+              hook_line = f"{m.group(1)}setupAshrahSystemBars({m.group(2)}){semi}\n"
+              src = src[:m.start()] + hook_line + src[m.start():]
+          else:
+              m2 = re.search(r'^([ \t]*)loadUrl\(', src, re.MULTILINE)
+              if not m2:
+                  print(f"❌ تعذر تحديد موضع loadUrl داخل {target}")
+                  sys.exit(1)
+              hook_line = f"{m2.group(1)}setupAshrahSystemBars(this){semi}\n"
+              src = src[:m2.start()] + hook_line + src[m2.start():]
+
+          last_brace = src.rfind("}")
+          if last_brace == -1:
+              print(f"❌ بنية غير صالحة في {target}")
+              sys.exit(1)
+
+          helpers = KOTLIN_HELPERS if is_kt else JAVA_HELPERS
+          src = src[:last_brace] + helpers + "\n" + src[last_brace:]
+
+          with open(target, "w", encoding="utf-8") as f:
+              f.write(src)
+
+          print(f"✅ تم حقن جسر AshrahSystemBars بنجاح في {target}")
+          PYEOF
       - uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
