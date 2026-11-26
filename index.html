@@ -9799,6 +9799,195 @@
       border-color: #cbd5e1;
       color: #475569;
     }
+    /* === PLATFORM_V360_IN_APP_UPDATE_PROGRESS === */
+    /* نافذة التحديث التلقائي مع شريط التقدم المباشر داخل التطبيق */
+    #ashrah-update-toast {
+      position: fixed;
+      left: 14px;
+      right: 14px;
+      bottom: calc(14px + var(--ashrah-safe-bottom, env(safe-area-inset-bottom, 0px)));
+      max-width: 420px;
+      margin: 0 auto;
+      z-index: 9985;
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+      padding: 13px 14px;
+      border-radius: 16px;
+      border: 1.5px solid rgba(251, 191, 36, 0.65);
+      background:
+        radial-gradient(ellipse 80% 75% at 50% 0%, rgba(251, 191, 36, 0.2), transparent 72%),
+        linear-gradient(160deg, #1d2231 0%, #10141f 100%);
+      color: #f8fafc;
+      box-shadow:
+        0 18px 36px rgba(0, 0, 0, 0.52),
+        0 0 0 1px rgba(251, 191, 36, 0.14);
+      direction: rtl;
+      text-align: right;
+      animation: ashrahUpdateSlideUp 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    #ashrah-update-toast.is-visible {
+      display: flex;
+    }
+    @keyframes ashrahUpdateSlideUp {
+      from { opacity: 0; transform: translateY(18px) scale(0.98); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    body.theme-light #ashrah-update-toast {
+      background:
+        radial-gradient(ellipse 85% 75% at 50% 0%, #fef3c7 0%, #ffffff 74%);
+      border-color: #f59e0b;
+      color: #0f172a;
+      box-shadow:
+        0 16px 34px rgba(120, 53, 15, 0.2),
+        0 4px 12px rgba(15, 23, 42, 0.08);
+    }
+
+    .ashrah-upd-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .ashrah-upd-title {
+      font-size: 0.94rem;
+      font-weight: 900;
+      color: #fde047;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    body.theme-light .ashrah-upd-title {
+      color: #92400e;
+    }
+    .ashrah-upd-ver-pill {
+      font-size: 0.72rem;
+      font-weight: 900;
+      padding: 2px 9px;
+      border-radius: 999px;
+      background: rgba(251, 191, 36, 0.2);
+      border: 1px solid rgba(251, 191, 36, 0.55);
+      color: #fef08a;
+      direction: ltr;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    body.theme-light .ashrah-upd-ver-pill {
+      background: #fef3c7;
+      border-color: #f59e0b;
+      color: #92400e;
+    }
+    .ashrah-upd-desc {
+      font-size: 0.8rem;
+      line-height: 1.5;
+      color: #cbd5e1;
+    }
+    body.theme-light .ashrah-upd-desc {
+      color: #475569;
+    }
+
+    /* شريط تقدم التحميل داخل التطبيق */
+    .ashrah-upd-prog-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      width: 100%;
+    }
+    .ashrah-upd-prog-track {
+      width: 100%;
+      height: 10px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(251, 191, 36, 0.28);
+      overflow: hidden;
+      position: relative;
+    }
+    body.theme-light .ashrah-upd-prog-track {
+      background: #f1f5f9;
+      border-color: #fde68a;
+    }
+    .ashrah-upd-prog-fill {
+      height: 100%;
+      width: 0%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #f59e0b 0%, #fde047 65%, #fbbf24 100%);
+      transition: width 0.18s ease-out;
+    }
+    .ashrah-upd-prog-fill.is-done {
+      background: linear-gradient(90deg, #16a34a 0%, #4ade80 100%);
+    }
+    .ashrah-upd-prog-fill.is-indeterminate {
+      width: 42% !important;
+      animation: ashrahIndetSlide 1.2s infinite ease-in-out;
+    }
+    @keyframes ashrahIndetSlide {
+      0% { transform: translateX(140%); }
+      100% { transform: translateX(-240%); }
+    }
+    .ashrah-upd-prog-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.74rem;
+      font-weight: 800;
+      color: #fde68a;
+    }
+    body.theme-light .ashrah-upd-prog-meta {
+      color: #92400e;
+    }
+    .ashrah-upd-prog-bytes {
+      direction: ltr;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.72rem;
+      opacity: 0.9;
+    }
+
+    .ashrah-upd-actions {
+      display: grid;
+      grid-template-columns: 1.45fr 0.85fr;
+      gap: 8px;
+      width: 100%;
+    }
+    .ashrah-upd-actions.is-single {
+      grid-template-columns: 1fr;
+    }
+    .ashrah-upd-btn-now {
+      padding: 10px 12px;
+      border-radius: 11px;
+      border: 1.5px solid #fef08a;
+      background: linear-gradient(135deg, #fde047 0%, #f59e0b 54%, #d97706 100%);
+      color: #111827;
+      font-family: inherit;
+      font-size: 0.86rem;
+      font-weight: 900;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      box-shadow: 0 3px 0 #b45309, 0 6px 14px rgba(217, 119, 6, 0.28);
+      transition: transform 0.12s ease, filter 0.16s ease;
+    }
+    .ashrah-upd-btn-now:active {
+      transform: translateY(1px);
+    }
+    .ashrah-upd-btn-later {
+      padding: 10px 10px;
+      border-radius: 11px;
+      border: 1px solid rgba(148, 163, 184, 0.34);
+      background: rgba(255, 255, 255, 0.08);
+      color: #cbd5e1;
+      font-family: inherit;
+      font-size: 0.84rem;
+      font-weight: 800;
+      cursor: pointer;
+      transition: background-color 0.16s ease;
+    }
+    body.theme-light .ashrah-upd-btn-later {
+      background: #f1f5f9;
+      border-color: #cbd5e1;
+      color: #475569;
+    }
     /* === EXTRA_STYLES_END === */
 </style>
 </head>
@@ -9948,7 +10137,7 @@
 
     <div class="app-footer">
       <!-- === VERSION_TAG_START === -->
-      <span style="color: #16a34a; font-weight: bold;">✅ الإصدار v3.59 (تحديث تجريبي لاختبار التحديث التلقائي)</span>
+      <span style="color: #16a34a; font-weight: bold;">✅ الإصدار v3.61 (تحديث تجريبي لاختبار التحميل والتثبيت المباشر داخل التطبيق)</span>
       <!-- === VERSION_TAG_END === -->
     </div>
 
@@ -18418,10 +18607,10 @@ buildRefereePlayersCardsHtml(room, state, showActionControls) {
 
   <!-- === PLATFORM_V358_AUTO_UPDATE_START === -->
   <script>
-    /* === PLATFORM_V358_AUTO_UPDATE_CHECKER === */
+    /* === PLATFORM_V360_IN_APP_UPDATE_PROGRESS === */
     (function () {
-      if (window.__ashrahAutoUpdateInit) return;
-      window.__ashrahAutoUpdateInit = true;
+      if (window.__ashrahAutoUpdateV360Init) return;
+      window.__ashrahAutoUpdateV360Init = true;
 
       const GH_REPO = "AbdultawabDarwesh/EshrahGame";
       const RELEASE_API_URL = "https://api.github.com/repos/" + GH_REPO + "/releases/latest";
@@ -18433,6 +18622,25 @@ buildRefereePlayersCardsHtml(room, state, showActionControls) {
       let isChecking = false;
       let pendingUpdate = null;
       let toastEl = null;
+
+      /* حالة التحميل الداخلي: idle | downloading | installing | need_permission | error */
+      let dlState = "idle";
+      let dlPct = 0;
+      let dlLoaded = 0;
+      let dlTotal = -1;
+      let dlErrorMsg = "";
+
+      function escHtml(s) {
+        return String(s || "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;");
+      }
+
+      function formatMb(bytes) {
+        if (!bytes || bytes < 0) return "";
+        return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+      }
 
       function parseVersionParts(text) {
         const m = String(text || "").match(/v?([0-9]+(?:\.[0-9]+)*)/i);
@@ -18508,7 +18716,18 @@ buildRefereePlayersCardsHtml(room, state, showActionControls) {
         } catch (e) {}
       }
 
-      function openDownloadLink(url) {
+      function hasNativeInAppDownloader() {
+        try {
+          return Boolean(
+            window.AshrahSystemBars &&
+            typeof window.AshrahSystemBars.downloadAndInstallApk === "function"
+          );
+        } catch (e) {
+          return false;
+        }
+      }
+
+      function openExternalDownload(url) {
         const targetUrl = String(url || FALLBACK_APK_URL).trim();
         try {
           if (window.AshrahSystemBars && typeof window.AshrahSystemBars.openExternalUrl === "function") {
@@ -18516,15 +18735,32 @@ buildRefereePlayersCardsHtml(room, state, showActionControls) {
             return;
           }
         } catch (e) {}
-
         try {
           const w = window.open(targetUrl, "_blank", "noopener");
           if (w) return;
         } catch (e) {}
-
         try {
           window.location.href = targetUrl;
         } catch (e) {}
+      }
+
+      function startUpdateAction() {
+        if (!pendingUpdate) return;
+        if (hasNativeInAppDownloader()) {
+          dlState = "downloading";
+          dlPct = 0;
+          dlLoaded = 0;
+          dlTotal = -1;
+          dlErrorMsg = "";
+          renderToast(true);
+          try {
+            window.AshrahSystemBars.downloadAndInstallApk(pendingUpdate.downloadUrl);
+          } catch (e) {
+            openExternalDownload(pendingUpdate.downloadUrl);
+          }
+        } else {
+          openExternalDownload(pendingUpdate.downloadUrl);
+        }
       }
 
       function ensureToastEl() {
@@ -18537,68 +18773,239 @@ buildRefereePlayersCardsHtml(room, state, showActionControls) {
         return toastEl;
       }
 
-      function syncToastVisibility() {
+      function updateProgressBarsFast() {
+        if (!toastEl || dlState !== "downloading") return false;
+        const fill = document.getElementById("ashrah-upd-prog-fill");
+        const pctPill = document.getElementById("ashrah-upd-pct-pill");
+        const bytesEl = document.getElementById("ashrah-upd-bytes");
+        if (!fill || !pctPill || !bytesEl) return false;
+
+        if (dlPct >= 0) {
+          fill.classList.remove("is-indeterminate");
+          fill.style.width = Math.min(100, Math.max(0, dlPct)) + "%";
+          pctPill.innerText = dlPct + "%";
+        } else {
+          fill.classList.add("is-indeterminate");
+          pctPill.innerText = "...";
+        }
+
+        if (dlTotal > 0) {
+          bytesEl.innerText = formatMb(dlLoaded) + " / " + formatMb(dlTotal);
+        } else if (dlLoaded > 0) {
+          bytesEl.innerText = formatMb(dlLoaded);
+        } else {
+          bytesEl.innerText = "جاري الاتصال...";
+        }
+        return true;
+      }
+
+      function renderToast(forceRebuild) {
         if (!toastEl && !pendingUpdate) return;
         const el = ensureToastEl();
+        const isActiveFlow = (dlState === "downloading" || dlState === "installing" || dlState === "need_permission");
         const shouldShow = Boolean(
           pendingUpdate &&
-          isHomeOrLobbyActive() &&
-          getDismissedTag() !== pendingUpdate.tag
+          (isActiveFlow || isHomeOrLobbyActive()) &&
+          (isActiveFlow || getDismissedTag() !== pendingUpdate.tag)
         );
+
         if (!shouldShow) {
           el.classList.remove("is-visible");
           return;
         }
 
-        const safeLabel = String(pendingUpdate.displayLabel || "جديد")
-          .replace(/&/g, "&amp;")
-          .replace(/</g, "&lt;")
-          .replace(/>/g, "&gt;");
-
-        el.innerHTML = `
-          <div class="ashrah-upd-head">
-            <span class="ashrah-upd-title">🚀 يتوفر تحديث جديد</span>
-            <span class="ashrah-upd-ver-pill">${safeLabel}</span>
-          </div>
-          <div class="ashrah-upd-desc">
-            تتوفر نسخة أحدث من تطبيق «عشرة» جاهزة للتحميل والتحديث المباشر فوق نسختك الحالية.
-          </div>
-          <div class="ashrah-upd-actions">
-            <button type="button" class="ashrah-upd-btn-now" id="ashrah-upd-now-btn">⬇️ تحديث الآن</button>
-            <button type="button" class="ashrah-upd-btn-later" id="ashrah-upd-later-btn">لاحقاً</button>
-          </div>
-        `;
-
-        const nowBtn = document.getElementById("ashrah-upd-now-btn");
-        if (nowBtn) {
-          nowBtn.onclick = () => {
-            nowBtn.innerText = "⏳ جاري فتح التحميل...";
-            openDownloadLink(pendingUpdate.downloadUrl);
-            setTimeout(() => {
-              if (nowBtn) nowBtn.innerText = "⬇️ تحديث الآن";
-            }, 2400);
-          };
+        if (!forceRebuild && dlState === "downloading" && el.dataset.mode === "downloading") {
+          if (updateProgressBarsFast()) {
+            el.classList.add("is-visible");
+            return;
+          }
         }
 
-        const laterBtn = document.getElementById("ashrah-upd-later-btn");
-        if (laterBtn) {
-          laterBtn.onclick = () => {
-            if (pendingUpdate) setDismissedTag(pendingUpdate.tag);
-            el.classList.remove("is-visible");
-          };
+        const safeLabel = escHtml(pendingUpdate.displayLabel || "جديد");
+        el.dataset.mode = dlState;
+
+        if (dlState === "downloading") {
+          const pctText = dlPct >= 0 ? (dlPct + "%") : "...";
+          const bytesText = dlTotal > 0
+            ? (formatMb(dlLoaded) + " / " + formatMb(dlTotal))
+            : (dlLoaded > 0 ? formatMb(dlLoaded) : "جاري الاتصال...");
+
+          el.innerHTML = `
+            <div class="ashrah-upd-head">
+              <span class="ashrah-upd-title">⬇️ جاري تحميل التحديث (${safeLabel})</span>
+              <span class="ashrah-upd-ver-pill" id="ashrah-upd-pct-pill">${pctText}</span>
+            </div>
+            <div class="ashrah-upd-prog-wrap">
+              <div class="ashrah-upd-prog-track">
+                <div class="ashrah-upd-prog-fill ${dlPct < 0 ? "is-indeterminate" : ""}" id="ashrah-upd-prog-fill" style="width:${Math.max(0, dlPct)}%;"></div>
+              </div>
+              <div class="ashrah-upd-prog-meta">
+                <span>يتم التنزيل داخل التطبيق...</span>
+                <span class="ashrah-upd-prog-bytes" id="ashrah-upd-bytes">${bytesText}</span>
+              </div>
+            </div>
+            <div class="ashrah-upd-actions is-single">
+              <button type="button" class="ashrah-upd-btn-later" id="ashrah-upd-cancel-btn">✕ إلغاء التحميل</button>
+            </div>
+          `;
+          const cancelBtn = document.getElementById("ashrah-upd-cancel-btn");
+          if (cancelBtn) {
+            cancelBtn.onclick = () => {
+              try {
+                if (window.AshrahSystemBars && typeof window.AshrahSystemBars.cancelApkDownload === "function") {
+                  window.AshrahSystemBars.cancelApkDownload();
+                }
+              } catch (e) {}
+              dlState = "idle";
+              renderToast(true);
+            };
+          }
+        } else if (dlState === "need_permission") {
+          el.innerHTML = `
+            <div class="ashrah-upd-head">
+              <span class="ashrah-upd-title">🔐 السماح بتثبيت التحديث</span>
+              <span class="ashrah-upd-ver-pill">100%</span>
+            </div>
+            <div class="ashrah-upd-prog-wrap">
+              <div class="ashrah-upd-prog-track">
+                <div class="ashrah-upd-prog-fill is-done" style="width:100%;"></div>
+              </div>
+            </div>
+            <div class="ashrah-upd-desc">
+              اكتمل تنزيل التحديث. فعّل خيار «السماح من هذا المصدر» لتطبيق عشرة ثم اضغط «تثبيت الآن» مباشرة دون إعادة تحميل.
+            </div>
+            <div class="ashrah-upd-actions">
+              <button type="button" class="ashrah-upd-btn-now" id="ashrah-upd-install-btn">📦 تثبيت الآن</button>
+              <button type="button" class="ashrah-upd-btn-later" id="ashrah-upd-close-btn">إغلاق</button>
+            </div>
+          `;
+          const instBtn = document.getElementById("ashrah-upd-install-btn");
+          if (instBtn) {
+            instBtn.onclick = () => {
+              try {
+                if (window.AshrahSystemBars && typeof window.AshrahSystemBars.installDownloadedApk === "function") {
+                  window.AshrahSystemBars.installDownloadedApk();
+                }
+              } catch (e) {}
+            };
+          }
+          const closeBtn = document.getElementById("ashrah-upd-close-btn");
+          if (closeBtn) {
+            closeBtn.onclick = () => {
+              dlState = "idle";
+              el.classList.remove("is-visible");
+            };
+          }
+        } else if (dlState === "installing") {
+          el.innerHTML = `
+            <div class="ashrah-upd-head">
+              <span class="ashrah-upd-title">✅ اكتمل تحميل التحديث</span>
+              <span class="ashrah-upd-ver-pill">100%</span>
+            </div>
+            <div class="ashrah-upd-prog-wrap">
+              <div class="ashrah-upd-prog-track">
+                <div class="ashrah-upd-prog-fill is-done" style="width:100%;"></div>
+              </div>
+            </div>
+            <div class="ashrah-upd-desc">
+              تم فتح نافذة التثبيت. إذا لم تظهر تلقائياً اضغط «فتح التثبيت».
+            </div>
+            <div class="ashrah-upd-actions">
+              <button type="button" class="ashrah-upd-btn-now" id="ashrah-upd-reopen-btn">📦 فتح التثبيت</button>
+              <button type="button" class="ashrah-upd-btn-later" id="ashrah-upd-close-btn">إغلاق</button>
+            </div>
+          `;
+          const reopenBtn = document.getElementById("ashrah-upd-reopen-btn");
+          if (reopenBtn) {
+            reopenBtn.onclick = () => {
+              try {
+                if (window.AshrahSystemBars && typeof window.AshrahSystemBars.installDownloadedApk === "function") {
+                  window.AshrahSystemBars.installDownloadedApk();
+                }
+              } catch (e) {}
+            };
+          }
+          const closeBtn = document.getElementById("ashrah-upd-close-btn");
+          if (closeBtn) {
+            closeBtn.onclick = () => {
+              dlState = "idle";
+              el.classList.remove("is-visible");
+            };
+          }
+        } else if (dlState === "error") {
+          el.innerHTML = `
+            <div class="ashrah-upd-head">
+              <span class="ashrah-upd-title">⚠️ تعذر إكمال التحميل</span>
+              <span class="ashrah-upd-ver-pill">${safeLabel}</span>
+            </div>
+            <div class="ashrah-upd-desc">
+              ${dlErrorMsg ? escHtml(dlErrorMsg) + " — " : ""}يمكنك إعادة المحاولة أو التحميل عبر المتصفح.
+            </div>
+            <div class="ashrah-upd-actions">
+              <button type="button" class="ashrah-upd-btn-now" id="ashrah-upd-retry-btn">🔄 إعادة المحاولة</button>
+              <button type="button" class="ashrah-upd-btn-later" id="ashrah-upd-ext-btn">🌐 المتصفح</button>
+            </div>
+          `;
+          const retryBtn = document.getElementById("ashrah-upd-retry-btn");
+          if (retryBtn) retryBtn.onclick = startUpdateAction;
+          const extBtn = document.getElementById("ashrah-upd-ext-btn");
+          if (extBtn) extBtn.onclick = () => openExternalDownload(pendingUpdate.downloadUrl);
+        } else {
+          el.innerHTML = `
+            <div class="ashrah-upd-head">
+              <span class="ashrah-upd-title">🚀 يتوفر تحديث جديد</span>
+              <span class="ashrah-upd-ver-pill">${safeLabel}</span>
+            </div>
+            <div class="ashrah-upd-desc">
+              تتوفر نسخة أحدث من تطبيق «عشرة» جاهزة للتحميل والتحديث المباشر فوق نسختك الحالية.
+            </div>
+            <div class="ashrah-upd-actions">
+              <button type="button" class="ashrah-upd-btn-now" id="ashrah-upd-now-btn">⬇️ تحديث الآن</button>
+              <button type="button" class="ashrah-upd-btn-later" id="ashrah-upd-later-btn">لاحقاً</button>
+            </div>
+          `;
+          const nowBtn = document.getElementById("ashrah-upd-now-btn");
+          if (nowBtn) nowBtn.onclick = startUpdateAction;
+          const laterBtn = document.getElementById("ashrah-upd-later-btn");
+          if (laterBtn) {
+            laterBtn.onclick = () => {
+              if (pendingUpdate) setDismissedTag(pendingUpdate.tag);
+              el.classList.remove("is-visible");
+            };
+          }
         }
 
         el.classList.add("is-visible");
       }
 
+      /* استقبال تقدم وحالة التحميل من أندرويد مباشرة */
+      window.__ashrahOnUpdateProgress = function (pct, loaded, total) {
+        dlPct = typeof pct === "number" ? pct : -1;
+        dlLoaded = typeof loaded === "number" ? loaded : 0;
+        dlTotal = typeof total === "number" ? total : -1;
+        if (dlState !== "downloading") dlState = "downloading";
+        renderToast(false);
+      };
+
+      window.__ashrahOnUpdateState = function (state, detail) {
+        if (state === "cancelled") {
+          dlState = "idle";
+          renderToast(true);
+          return;
+        }
+        dlState = state || "idle";
+        dlErrorMsg = detail || "";
+        renderToast(true);
+      };
+
       async function checkForUpdates(force) {
-        if (isChecking) return;
+        if (isChecking || dlState === "downloading") return;
         if (!force && !isHomeOrLobbyActive()) return;
         if (typeof navigator !== "undefined" && navigator.onLine === false) return;
 
         const now = Date.now();
         if (!force && lastCheckAt > 0 && (now - lastCheckAt) < CHECK_COOLDOWN_MS) {
-          syncToastVisibility();
+          renderToast(false);
           return;
         }
 
@@ -18628,7 +19035,8 @@ buildRefereePlayersCardsHtml(room, state, showActionControls) {
 
           if (!isNewer) {
             pendingUpdate = null;
-            syncToastVisibility();
+            dlState = "idle";
+            renderToast(true);
             return;
           }
 
@@ -18650,9 +19058,9 @@ buildRefereePlayersCardsHtml(room, state, showActionControls) {
             displayLabel: displayLabel,
             downloadUrl: downloadUrl
           };
-          syncToastVisibility();
+          renderToast(true);
         } catch (e) {
-          /* فحص صامت عند عدم توفر الإنترنت أو تعذر الاتصال */
+          /* فحص صامت عند عدم توفر الإنترنت */
         } finally {
           isChecking = false;
         }
@@ -18663,19 +19071,19 @@ buildRefereePlayersCardsHtml(room, state, showActionControls) {
       };
 
       function initAutoUpdateHooks() {
-        if (typeof window.showScreen === "function" && !window.showScreen.__v358UpdateWrapped) {
+        if (typeof window.showScreen === "function" && !window.showScreen.__v360UpdateWrapped) {
           const origShowScreen = window.showScreen;
           const wrappedShow = function (screenId) {
             const res = origShowScreen.apply(this, arguments);
             if (screenId === "screen-home" || screenId === "screen-lobby") {
-              syncToastVisibility();
+              renderToast(false);
               checkForUpdates(false);
-            } else if (toastEl) {
+            } else if (toastEl && dlState !== "downloading") {
               toastEl.classList.remove("is-visible");
             }
             return res;
           };
-          wrappedShow.__v358UpdateWrapped = true;
+          wrappedShow.__v360UpdateWrapped = true;
           window.showScreen = wrappedShow;
         }
 
