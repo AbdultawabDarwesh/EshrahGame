@@ -9670,6 +9670,135 @@
     #screen-game .game-top-bar {
       top: var(--ashrah-safe-top, env(safe-area-inset-top, 0px)) !important;
     }
+    /* === PLATFORM_V358_AUTO_UPDATE_CHECKER === */
+    /* بطاقة إشعار التحديث التلقائي (تظهر في الشاشة الرئيسية والغرفة فقط دون إزاحة التصميم) */
+    #ashrah-update-toast {
+      position: fixed;
+      left: 14px;
+      right: 14px;
+      bottom: calc(14px + var(--ashrah-safe-bottom, env(safe-area-inset-bottom, 0px)));
+      max-width: 420px;
+      margin: 0 auto;
+      z-index: 9985;
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+      padding: 13px 14px;
+      border-radius: 16px;
+      border: 1.5px solid rgba(251, 191, 36, 0.65);
+      background:
+        radial-gradient(ellipse 80% 75% at 50% 0%, rgba(251, 191, 36, 0.2), transparent 72%),
+        linear-gradient(160deg, #1d2231 0%, #10141f 100%);
+      color: #f8fafc;
+      box-shadow:
+        0 18px 36px rgba(0, 0, 0, 0.52),
+        0 0 0 1px rgba(251, 191, 36, 0.14);
+      direction: rtl;
+      text-align: right;
+      animation: ashrahUpdateSlideUp 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    #ashrah-update-toast.is-visible {
+      display: flex;
+    }
+    @keyframes ashrahUpdateSlideUp {
+      from { opacity: 0; transform: translateY(18px) scale(0.98); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    body.theme-light #ashrah-update-toast {
+      background:
+        radial-gradient(ellipse 85% 75% at 50% 0%, #fef3c7 0%, #ffffff 74%);
+      border-color: #f59e0b;
+      color: #0f172a;
+      box-shadow:
+        0 16px 34px rgba(120, 53, 15, 0.2),
+        0 4px 12px rgba(15, 23, 42, 0.08);
+    }
+
+    .ashrah-upd-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .ashrah-upd-title {
+      font-size: 0.94rem;
+      font-weight: 900;
+      color: #fde047;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    body.theme-light .ashrah-upd-title {
+      color: #92400e;
+    }
+    .ashrah-upd-ver-pill {
+      font-size: 0.72rem;
+      font-weight: 900;
+      padding: 2px 9px;
+      border-radius: 999px;
+      background: rgba(251, 191, 36, 0.2);
+      border: 1px solid rgba(251, 191, 36, 0.55);
+      color: #fef08a;
+      direction: ltr;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    body.theme-light .ashrah-upd-ver-pill {
+      background: #fef3c7;
+      border-color: #f59e0b;
+      color: #92400e;
+    }
+    .ashrah-upd-desc {
+      font-size: 0.8rem;
+      line-height: 1.5;
+      color: #cbd5e1;
+    }
+    body.theme-light .ashrah-upd-desc {
+      color: #475569;
+    }
+    .ashrah-upd-actions {
+      display: grid;
+      grid-template-columns: 1.45fr 0.85fr;
+      gap: 8px;
+      width: 100%;
+    }
+    .ashrah-upd-btn-now {
+      padding: 10px 12px;
+      border-radius: 11px;
+      border: 1.5px solid #fef08a;
+      background: linear-gradient(135deg, #fde047 0%, #f59e0b 54%, #d97706 100%);
+      color: #111827;
+      font-family: inherit;
+      font-size: 0.86rem;
+      font-weight: 900;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      box-shadow: 0 3px 0 #b45309, 0 6px 14px rgba(217, 119, 6, 0.28);
+      transition: transform 0.12s ease, filter 0.16s ease;
+    }
+    .ashrah-upd-btn-now:active {
+      transform: translateY(1px);
+    }
+    .ashrah-upd-btn-later {
+      padding: 10px 10px;
+      border-radius: 11px;
+      border: 1px solid rgba(148, 163, 184, 0.34);
+      background: rgba(255, 255, 255, 0.08);
+      color: #cbd5e1;
+      font-family: inherit;
+      font-size: 0.84rem;
+      font-weight: 800;
+      cursor: pointer;
+      transition: background-color 0.16s ease;
+    }
+    body.theme-light .ashrah-upd-btn-later {
+      background: #f1f5f9;
+      border-color: #cbd5e1;
+      color: #475569;
+    }
     /* === EXTRA_STYLES_END === */
 </style>
 </head>
@@ -9819,7 +9948,7 @@
 
     <div class="app-footer">
       <!-- === VERSION_TAG_START === -->
-      <span style="color: #16a34a; font-weight: bold;">✅ الإصدار v3.57 (إضافة زر العودة للغرفة للمضيف باللون الأحمر في لوحة الأعضاء + تلوين حواف النظام العلوية والسفلية حسب خلفية اللعبة)</span>
+      <span style="color: #16a34a; font-weight: bold;">✅ الإصدار v3.58 (فحص تلقائي للتحديثات عند فتح التطبيق والغرفة + زر تحديث مباشر متوافق مع APK)</span>
       <!-- === VERSION_TAG_END === -->
     </div>
 
@@ -18285,6 +18414,286 @@ buildRefereePlayersCardsHtml(room, state, showActionControls) {
     })();
   </script>
   <!-- === PLATFORM_V357_SCRIPT_END === -->
+
+
+  <!-- === PLATFORM_V358_AUTO_UPDATE_START === -->
+  <script>
+    /* === PLATFORM_V358_AUTO_UPDATE_CHECKER === */
+    (function () {
+      if (window.__ashrahAutoUpdateInit) return;
+      window.__ashrahAutoUpdateInit = true;
+
+      const GH_REPO = "AbdultawabDarwesh/EshrahGame";
+      const RELEASE_API_URL = "https://api.github.com/repos/" + GH_REPO + "/releases/latest";
+      const FALLBACK_APK_URL = "https://github.com/" + GH_REPO + "/releases/latest/download/Ashrah-latest.apk";
+      const CHECK_COOLDOWN_MS = 90000;
+      const DISMISSED_KEY = "eshrah_dismissed_update_tag";
+
+      let lastCheckAt = 0;
+      let isChecking = false;
+      let pendingUpdate = null;
+      let toastEl = null;
+
+      function parseVersionParts(text) {
+        const m = String(text || "").match(/v?([0-9]+(?:\.[0-9]+)*)/i);
+        if (!m) return [];
+        return m[1].split(".").map((n) => parseInt(n, 10) || 0);
+      }
+
+      function parseBuildNumber(text) {
+        const m = String(text || "").match(/-b([0-9]+)/i);
+        return m ? (parseInt(m[1], 10) || 0) : 0;
+      }
+
+      function compareVersionParts(a, b) {
+        const maxLen = Math.max(a.length, b.length);
+        for (let i = 0; i < maxLen; i++) {
+          const av = a[i] || 0;
+          const bv = b[i] || 0;
+          if (av > bv) return 1;
+          if (av < bv) return -1;
+        }
+        return 0;
+      }
+
+      function getLocalAppInfo() {
+        let verStr = "";
+        let buildCode = 0;
+
+        try {
+          if (window.AshrahSystemBars) {
+            if (typeof window.AshrahSystemBars.getAppVersionName === "function") {
+              verStr = String(window.AshrahSystemBars.getAppVersionName() || "").trim();
+            }
+            if (typeof window.AshrahSystemBars.getAppBuildCode === "function") {
+              buildCode = parseInt(window.AshrahSystemBars.getAppBuildCode(), 10) || 0;
+            }
+          }
+        } catch (e) {}
+
+        if (!verStr) {
+          const footer = document.querySelector(".app-footer");
+          const txt = footer ? (footer.textContent || "") : "";
+          const m = txt.match(/v([0-9]+(?:\.[0-9]+)*)/i);
+          if (m) verStr = m[1];
+        }
+
+        return {
+          versionText: verStr || "0.0",
+          versionParts: parseVersionParts(verStr || "0.0"),
+          buildCode: buildCode
+        };
+      }
+
+      function isHomeOrLobbyActive() {
+        const home = document.getElementById("screen-home");
+        const lobby = document.getElementById("screen-lobby");
+        return Boolean(
+          (home && home.classList.contains("active")) ||
+          (lobby && lobby.classList.contains("active"))
+        );
+      }
+
+      function getDismissedTag() {
+        try {
+          return window.sessionStorage ? (window.sessionStorage.getItem(DISMISSED_KEY) || "") : "";
+        } catch (e) {
+          return "";
+        }
+      }
+
+      function setDismissedTag(tag) {
+        try {
+          if (window.sessionStorage) window.sessionStorage.setItem(DISMISSED_KEY, String(tag || ""));
+        } catch (e) {}
+      }
+
+      function openDownloadLink(url) {
+        const targetUrl = String(url || FALLBACK_APK_URL).trim();
+        try {
+          if (window.AshrahSystemBars && typeof window.AshrahSystemBars.openExternalUrl === "function") {
+            window.AshrahSystemBars.openExternalUrl(targetUrl);
+            return;
+          }
+        } catch (e) {}
+
+        try {
+          const w = window.open(targetUrl, "_blank", "noopener");
+          if (w) return;
+        } catch (e) {}
+
+        try {
+          window.location.href = targetUrl;
+        } catch (e) {}
+      }
+
+      function ensureToastEl() {
+        if (toastEl) return toastEl;
+        toastEl = document.createElement("div");
+        toastEl.id = "ashrah-update-toast";
+        toastEl.setAttribute("role", "dialog");
+        toastEl.setAttribute("aria-live", "polite");
+        document.body.appendChild(toastEl);
+        return toastEl;
+      }
+
+      function syncToastVisibility() {
+        if (!toastEl && !pendingUpdate) return;
+        const el = ensureToastEl();
+        const shouldShow = Boolean(
+          pendingUpdate &&
+          isHomeOrLobbyActive() &&
+          getDismissedTag() !== pendingUpdate.tag
+        );
+        if (!shouldShow) {
+          el.classList.remove("is-visible");
+          return;
+        }
+
+        const safeLabel = String(pendingUpdate.displayLabel || "جديد")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;");
+
+        el.innerHTML = `
+          <div class="ashrah-upd-head">
+            <span class="ashrah-upd-title">🚀 يتوفر تحديث جديد</span>
+            <span class="ashrah-upd-ver-pill">${safeLabel}</span>
+          </div>
+          <div class="ashrah-upd-desc">
+            تتوفر نسخة أحدث من تطبيق «عشرة» جاهزة للتحميل والتحديث المباشر فوق نسختك الحالية.
+          </div>
+          <div class="ashrah-upd-actions">
+            <button type="button" class="ashrah-upd-btn-now" id="ashrah-upd-now-btn">⬇️ تحديث الآن</button>
+            <button type="button" class="ashrah-upd-btn-later" id="ashrah-upd-later-btn">لاحقاً</button>
+          </div>
+        `;
+
+        const nowBtn = document.getElementById("ashrah-upd-now-btn");
+        if (nowBtn) {
+          nowBtn.onclick = () => {
+            nowBtn.innerText = "⏳ جاري فتح التحميل...";
+            openDownloadLink(pendingUpdate.downloadUrl);
+            setTimeout(() => {
+              if (nowBtn) nowBtn.innerText = "⬇️ تحديث الآن";
+            }, 2400);
+          };
+        }
+
+        const laterBtn = document.getElementById("ashrah-upd-later-btn");
+        if (laterBtn) {
+          laterBtn.onclick = () => {
+            if (pendingUpdate) setDismissedTag(pendingUpdate.tag);
+            el.classList.remove("is-visible");
+          };
+        }
+
+        el.classList.add("is-visible");
+      }
+
+      async function checkForUpdates(force) {
+        if (isChecking) return;
+        if (!force && !isHomeOrLobbyActive()) return;
+        if (typeof navigator !== "undefined" && navigator.onLine === false) return;
+
+        const now = Date.now();
+        if (!force && lastCheckAt > 0 && (now - lastCheckAt) < CHECK_COOLDOWN_MS) {
+          syncToastVisibility();
+          return;
+        }
+
+        isChecking = true;
+        lastCheckAt = now;
+
+        try {
+          const resp = await fetch(RELEASE_API_URL, {
+            method: "GET",
+            cache: "no-store",
+            headers: { "Accept": "application/vnd.github+json" }
+          });
+          if (!resp || !resp.ok) return;
+
+          const data = await resp.json();
+          if (!data || data.draft) return;
+
+          const tag = String(data.tag_name || "").trim();
+          const releaseName = String(data.name || "").trim();
+          const remoteParts = parseVersionParts(tag || releaseName);
+          if (remoteParts.length === 0) return;
+
+          const remoteBuild = parseBuildNumber(tag);
+          const localInfo = getLocalAppInfo();
+          const cmp = compareVersionParts(remoteParts, localInfo.versionParts);
+          const isNewer = (cmp > 0) || (cmp === 0 && localInfo.buildCode > 0 && remoteBuild > localInfo.buildCode);
+
+          if (!isNewer) {
+            pendingUpdate = null;
+            syncToastVisibility();
+            return;
+          }
+
+          let downloadUrl = FALLBACK_APK_URL;
+          if (Array.isArray(data.assets)) {
+            const apkAsset =
+              data.assets.find((a) => a && typeof a.name === "string" && a.name.toLowerCase() === "ashrah-latest.apk") ||
+              data.assets.find((a) => a && typeof a.name === "string" && a.name.toLowerCase().endsWith(".apk"));
+            if (apkAsset && apkAsset.browser_download_url) {
+              downloadUrl = apkAsset.browser_download_url;
+            }
+          }
+
+          const verText = "v" + remoteParts.join(".");
+          const displayLabel = (cmp === 0 && remoteBuild > 0) ? (verText + " #" + remoteBuild) : verText;
+
+          pendingUpdate = {
+            tag: tag || verText,
+            displayLabel: displayLabel,
+            downloadUrl: downloadUrl
+          };
+          syncToastVisibility();
+        } catch (e) {
+          /* فحص صامت عند عدم توفر الإنترنت أو تعذر الاتصال */
+        } finally {
+          isChecking = false;
+        }
+      }
+
+      window.checkAshrahAppUpdate = function (force) {
+        return checkForUpdates(Boolean(force));
+      };
+
+      function initAutoUpdateHooks() {
+        if (typeof window.showScreen === "function" && !window.showScreen.__v358UpdateWrapped) {
+          const origShowScreen = window.showScreen;
+          const wrappedShow = function (screenId) {
+            const res = origShowScreen.apply(this, arguments);
+            if (screenId === "screen-home" || screenId === "screen-lobby") {
+              syncToastVisibility();
+              checkForUpdates(false);
+            } else if (toastEl) {
+              toastEl.classList.remove("is-visible");
+            }
+            return res;
+          };
+          wrappedShow.__v358UpdateWrapped = true;
+          window.showScreen = wrappedShow;
+        }
+
+        setTimeout(() => {
+          if (isHomeOrLobbyActive()) {
+            checkForUpdates(false);
+          }
+        }, 1200);
+      }
+
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", initAutoUpdateHooks);
+      } else {
+        initAutoUpdateHooks();
+      }
+    })();
+  </script>
+  <!-- === PLATFORM_V358_AUTO_UPDATE_END === -->
 
 </body>
 </html>
