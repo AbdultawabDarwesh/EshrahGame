@@ -49,15 +49,15 @@ jobs:
               implementation platform('org.jetbrains.kotlin:kotlin-bom:1.8.22')
           }
           EOF
-      - name: Patch Android System Bars
+      - name: Patch Android System Bars & Update Bridge
         run: |
           python3 - << 'PYEOF'
           import os, re, sys
 
-          MARKER = "ASHRAH_SYSTEM_BARS_BRIDGE_V2"
+          MARKER = "ASHRAH_SYSTEM_BARS_BRIDGE_V3"
 
           JAVA_HELPERS = """
-              /* ASHRAH_SYSTEM_BARS_BRIDGE_V2 */
+              /* ASHRAH_SYSTEM_BARS_BRIDGE_V3 */
               private android.view.View ashrahStatusBarBg;
               private android.view.View ashrahNavBarBg;
               private int ashrahTopColor = android.graphics.Color.parseColor("#faf2db");
@@ -205,11 +205,51 @@ jobs:
                   public void setColors(final String topHex, final String bottomHex, final boolean isLight) {
                       applyAshrahBarColors(topHex, bottomHex, isLight);
                   }
+
+                  @android.webkit.JavascriptInterface
+                  public void openExternalUrl(final String url) {
+                      if (url == null) return;
+                      final String trimmed = url.trim();
+                      if (!trimmed.startsWith("https://") && !trimmed.startsWith("http://")) return;
+                      runOnUiThread(() -> {
+                          try {
+                              android.content.Intent intent = new android.content.Intent(
+                                  android.content.Intent.ACTION_VIEW,
+                                  android.net.Uri.parse(trimmed)
+                              );
+                              intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+                              startActivity(intent);
+                          } catch (Exception ignored) {}
+                      });
+                  }
+
+                  @android.webkit.JavascriptInterface
+                  public int getAppBuildCode() {
+                      try {
+                          android.content.pm.PackageInfo pInfo = getPackageManager().getPackageInfo(getPackageName(), 0);
+                          if (android.os.Build.VERSION.SDK_INT >= 28) {
+                              return (int) pInfo.getLongVersionCode();
+                          }
+                          return pInfo.versionCode;
+                      } catch (Exception ignored) {
+                          return 0;
+                      }
+                  }
+
+                  @android.webkit.JavascriptInterface
+                  public String getAppVersionName() {
+                      try {
+                          android.content.pm.PackageInfo pInfo = getPackageManager().getPackageInfo(getPackageName(), 0);
+                          return pInfo.versionName != null ? pInfo.versionName : "";
+                      } catch (Exception ignored) {
+                          return "";
+                      }
+                  }
               }
           """
 
           KOTLIN_HELPERS = """
-              /* ASHRAH_SYSTEM_BARS_BRIDGE_V2 */
+              /* ASHRAH_SYSTEM_BARS_BRIDGE_V3 */
               private var ashrahStatusBarBg: android.view.View? = null
               private var ashrahNavBarBg: android.view.View? = null
               private var ashrahTopColor: Int = android.graphics.Color.parseColor("#faf2db")
@@ -349,6 +389,50 @@ jobs:
                   fun setColors(topHex: String?, bottomHex: String?, isLight: Boolean) {
                       applyAshrahBarColors(topHex, bottomHex, isLight)
                   }
+
+                  @android.webkit.JavascriptInterface
+                  fun openExternalUrl(url: String?) {
+                      if (url.isNullOrBlank()) return
+                      val trimmed = url.trim()
+                      if (!trimmed.startsWith("https://") && !trimmed.startsWith("http://")) return
+                      runOnUiThread {
+                          try {
+                              val intent = android.content.Intent(
+                                  android.content.Intent.ACTION_VIEW,
+                                  android.net.Uri.parse(trimmed)
+                              )
+                              intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                              startActivity(intent)
+                          } catch (_: Exception) {}
+                      }
+                  }
+
+                  @android.webkit.JavascriptInterface
+                  fun getAppBuildCode(): Int {
+                      return try {
+                          @Suppress("DEPRECATION")
+                          val pInfo = packageManager.getPackageInfo(packageName, 0)
+                          if (android.os.Build.VERSION.SDK_INT >= 28) {
+                              pInfo.longVersionCode.toInt()
+                          } else {
+                              @Suppress("DEPRECATION")
+                              pInfo.versionCode
+                          }
+                      } catch (_: Exception) {
+                          0
+                      }
+                  }
+
+                  @android.webkit.JavascriptInterface
+                  fun getAppVersionName(): String {
+                      return try {
+                          @Suppress("DEPRECATION")
+                          val pInfo = packageManager.getPackageInfo(packageName, 0)
+                          pInfo.versionName ?: ""
+                      } catch (_: Exception) {
+                          ""
+                      }
+                  }
               }
           """
 
@@ -378,7 +462,7 @@ jobs:
               src = f.read()
 
           if MARKER in src:
-              print(f"ℹ️ جسر AshrahSystemBars مثبّت بالفعل في {target}")
+              print(f"ℹ️ جسر AshrahSystemBars (V3) مثبّت بالفعل في {target}")
               sys.exit(0)
 
           is_kt = target.endswith(".kt")
@@ -407,7 +491,7 @@ jobs:
           with open(target, "w", encoding="utf-8") as f:
               f.write(src)
 
-          print(f"✅ تم حقن جسر AshrahSystemBars بنجاح في {target}")
+          print(f"✅ تم حقن جسر AshrahSystemBars + openExternalUrl بنجاح في {target}")
           PYEOF
       - uses: actions/setup-java@v4
         with:
