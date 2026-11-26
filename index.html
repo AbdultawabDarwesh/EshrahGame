@@ -9988,6 +9988,352 @@
       border-color: #cbd5e1;
       color: #475569;
     }
+    /* === PLATFORM_V363_NO_LOBBY_BTN_AND_FIXED_MAFIA_DOCKS === */
+    /* =====================================================================
+       1) إخفاء أي زر «العودة للغرفة» من شاشات اللعب في جميع الألعاب
+          وإبقائه فقط داخل لوحة أعضاء الغرفة (#player-status-popup) للمضيف
+       ===================================================================== */
+    #back-to-lobby-wrap,
+    #screen-game #back-to-lobby-wrap,
+    #screen-game #back-to-lobby-btn {
+      display: none !important;
+    }
+
+    /* =====================================================================
+       2) قفل الإطار العام على ارتفاع الشاشة (100dvh) لشاشات المافيا ذات الأزرار
+          السفلية المثبتة: الرأس ثابت بالأعلى، الأزرار ثابتة بالأسفل لا تصعد أبداً
+          عند السحب، وفقط المحتوى الأوسط (.mafia-mid-scroll) قابل للتمرير
+       ===================================================================== */
+    html:has(#screen-game.active .mafia-fixed-dock),
+    body:has(#screen-game.active .mafia-fixed-dock) {
+      height: 100dvh !important;
+      min-height: 100dvh !important;
+      max-height: 100dvh !important;
+      overflow: hidden !important;
+      overscroll-behavior: none !important;
+    }
+
+    .app-container:has(#screen-game.active .mafia-fixed-dock) {
+      height: 100dvh !important;
+      min-height: 100dvh !important;
+      max-height: 100dvh !important;
+      overflow: hidden !important;
+      padding-top: var(--ashrah-safe-top, env(safe-area-inset-top, 0px)) !important;
+      padding-bottom: calc(4px + var(--ashrah-safe-bottom, env(safe-area-inset-bottom, 0px))) !important;
+      display: flex !important;
+      flex-direction: column !important;
+    }
+
+    #screen-game.active:has(.mafia-fixed-dock) {
+      flex: 1 1 0 !important;
+      min-height: 0 !important;
+      height: auto !important;
+      overflow: hidden !important;
+      display: flex !important;
+      flex-direction: column !important;
+    }
+
+    #screen-game.active:has(.mafia-fixed-dock) .game-top-bar {
+      position: relative !important;
+      top: 0 !important;
+      flex: 0 0 auto !important;
+      margin-top: 8px !important;
+      margin-bottom: 0 !important;
+      z-index: 25 !important;
+    }
+
+    #screen-game.active:has(.mafia-fixed-dock) #game-scroll-area {
+      flex: 1 1 0 !important;
+      min-height: 0 !important;
+      width: 100% !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      overflow: hidden !important;
+      display: flex !important;
+      flex-direction: column !important;
+    }
+
+    #screen-game.active:has(.mafia-fixed-dock) #game-container {
+      flex: 1 1 0 !important;
+      min-height: 0 !important;
+      width: 100% !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      overflow: hidden !important;
+      display: flex !important;
+      flex-direction: column !important;
+    }
+
+    .app-container:has(#screen-game.active .mafia-fixed-dock) .app-footer {
+      flex: 0 0 auto !important;
+      margin-top: 0 !important;
+      padding: 3px 4px 2px !important;
+      font-size: 0.66rem !important;
+    }
+
+    /* الهيكل الداخلي المثبت في المافيا: منطقة وسطية متحركة + قاعدة سفلية ثابتة */
+    #screen-game .mafia-wrap.mafia-fixed-dock {
+      flex: 1 1 0 !important;
+      min-height: 0 !important;
+      height: 100% !important;
+      width: 100% !important;
+      overflow: hidden !important;
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 0 !important;
+    }
+
+    #screen-game .mafia-wrap.mafia-fixed-dock > .mafia-mid-scroll {
+      flex: 1 1 0 !important;
+      min-height: 0 !important;
+      width: 100% !important;
+      overflow-y: auto !important;
+      overflow-x: hidden !important;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior-y: contain;
+      padding: 10px 2px 12px !important;
+      display: flex !important;
+      flex-direction: column !important;
+    }
+
+    #screen-game .mafia-wrap.mafia-fixed-dock > .mafia-mid-scroll > .mafia-mid-inner {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    #screen-game .mafia-wrap.mafia-fixed-dock > .mafia-mid-scroll > .mafia-mid-inner.is-centered {
+      margin-top: auto;
+      margin-bottom: auto;
+    }
+
+    /* إلغاء التمرير المزدوج داخل شبكة الأوراق وقائمة الأدوار حتى يتمرّر الوسط بسلاسة تامة */
+    #screen-game .mafia-wrap.mafia-fixed-dock .mafia-deck-grid,
+    #screen-game .mafia-wrap.mafia-fixed-dock .mafia-role-edit-list {
+      max-height: none !important;
+      overflow: visible !important;
+    }
+
+    /* القاعدة السفلية الثابتة تماماً (لا تصعد عند السحب للأعلى ولا تتحرك مع التمرير) */
+    #screen-game .mafia-wrap.mafia-fixed-dock > .mafia-fixed-bottom-dock {
+      flex: 0 0 auto !important;
+      width: 100% !important;
+      padding: 8px 0 4px !important;
+      margin: 0 !important;
+      border-top: 1px solid rgba(248, 113, 113, 0.16);
+      background: linear-gradient(180deg, rgba(19, 6, 10, 0.88) 0%, #13060a 100%);
+      z-index: 30;
+    }
+    body.theme-light #screen-game .mafia-wrap.mafia-fixed-dock > .mafia-fixed-bottom-dock {
+      border-top-color: rgba(220, 38, 38, 0.14);
+      background: linear-gradient(180deg, rgba(245, 234, 236, 0.92) 0%, #f5eaec 100%);
+    }
+
+    #screen-game .mafia-wrap.mafia-fixed-dock > .mafia-fixed-bottom-dock .mafia-nav-row {
+      margin-top: 0 !important;
+    }
+    #screen-game .mafia-wrap.mafia-fixed-dock > .mafia-fixed-bottom-dock .btn {
+      margin-top: 0 !important;
+      margin-bottom: 0 !important;
+    }
+    #screen-game .mafia-wrap.mafia-fixed-dock > .mafia-fixed-bottom-dock .mafia-wait-progress-slot {
+      padding-top: 0 !important;
+      margin: 0 !important;
+    }
+    #screen-game .mafia-wrap.mafia-fixed-dock > .mafia-fixed-bottom-dock .mafia-stepper-wrap {
+      margin-bottom: 0 !important;
+    }
+
+    /* تنسيق زري التصويت المتجاورين (تأكيد إغلاق الجولة | رجوع للتعديلات) */
+    #screen-game .mafia-wrap .mafia-voting-dock-row .mafia-nav-btn {
+      font-size: clamp(0.8rem, 3.5vw, 0.92rem) !important;
+      padding: 0 8px !important;
+      letter-spacing: 0 !important;
+    }
+
+    /* ضمان توفر تنسيقات عداد البطة وعمودي لوحة استلام الحكم في جميع النسخ */
+    .mafia-pick-counter-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.75rem;
+      font-weight: 900;
+      padding: 3px 10px;
+      border-radius: 999px;
+      background: rgba(245, 158, 11, 0.18);
+      border: 1px solid rgba(251, 191, 36, 0.5);
+      color: #fde68a;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .mafia-pick-counter-pill.is-done {
+      background: rgba(34, 197, 94, 0.22);
+      border-color: rgba(74, 222, 128, 0.55);
+      color: #86efac;
+    }
+    body.theme-light .mafia-pick-counter-pill {
+      background: #fef3c7;
+      border-color: #f59e0b;
+      color: #92400e;
+    }
+    body.theme-light .mafia-pick-counter-pill.is-done {
+      background: #dcfce7;
+      border-color: #22c55e;
+      color: #15803d;
+    }
+    .mafia-ref-ready-banner {
+      padding: 12px 14px !important;
+    }
+    .mafia-ref-ready-banner h3 {
+      margin-bottom: 0 !important;
+      font-size: 1.04rem !important;
+    }
+    .mafia-ref-ready-columns {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 9px;
+      align-items: start;
+      width: 100%;
+    }
+    .mafia-ref-ready-col {
+      background: linear-gradient(180deg, #1a0a0f 0%, #12070a 100%);
+      border: 1.5px solid rgba(248, 113, 113, 0.26);
+      border-radius: 15px;
+      padding: 10px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      min-width: 0;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.28);
+    }
+    body.theme-light .mafia-ref-ready-col {
+      background: #ffffff;
+      border-color: #fecaca;
+      box-shadow: 0 8px 20px -8px rgba(185, 28, 28, 0.12);
+    }
+    .mafia-ref-ready-col-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 4px;
+      padding: 0 3px 6px;
+      border-bottom: 1px solid rgba(248, 113, 113, 0.2);
+      font-size: 0.82rem;
+      font-weight: 900;
+      color: #fee2e2;
+    }
+    body.theme-light .mafia-ref-ready-col-head {
+      border-bottom-color: #fee2e2;
+      color: #7f1d1d;
+    }
+    .mafia-ref-col-count {
+      font-size: 0.68rem;
+      font-weight: 900;
+      padding: 1px 7px;
+      border-radius: 999px;
+      background: rgba(248, 113, 113, 0.18);
+      border: 1px solid rgba(248, 113, 113, 0.42);
+      color: #fecaca;
+      flex-shrink: 0;
+    }
+    body.theme-light .mafia-ref-col-count {
+      background: #fee2e2;
+      border-color: #fca5a5;
+      color: #991b1b;
+    }
+    .mafia-ref-ready-list {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      width: 100%;
+    }
+    .mafia-ref-ready-card {
+      height: 54px;
+      min-height: 54px;
+      max-height: 54px;
+      padding: 6px 8px;
+      border-radius: 11px;
+      border: 1.5px solid rgba(248, 113, 113, 0.24);
+      background: #14080c;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+      width: 100%;
+      box-sizing: border-box;
+      overflow: hidden;
+    }
+    .mafia-ref-ready-card.is-me {
+      background: rgba(220, 38, 38, 0.2);
+      border-color: rgba(248, 113, 113, 0.65);
+    }
+    body.theme-light .mafia-ref-ready-card {
+      background: #fffafa;
+      border-color: #fecaca;
+      color: #0f172a;
+    }
+    body.theme-light .mafia-ref-ready-card.is-me {
+      background: #fee2e2;
+      border-color: #f87171;
+    }
+    .mafia-ref-ready-card .status-dot {
+      width: 8px;
+      height: 8px;
+      margin-left: 0;
+      flex-shrink: 0;
+    }
+    .mafia-ref-card-num {
+      font-size: 0.66rem;
+      font-weight: 900;
+      min-width: 22px;
+      height: 20px;
+      padding: 0 4px;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(220, 38, 38, 0.2);
+      border: 1px solid rgba(248, 113, 113, 0.42);
+      color: #fecaca;
+      flex-shrink: 0;
+    }
+    body.theme-light .mafia-ref-card-num {
+      background: #fee2e2;
+      border-color: #fca5a5;
+      color: #991b1b;
+    }
+    .mafia-ref-card-svg {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      line-height: 0;
+    }
+    .mafia-ref-card-svg svg {
+      height: 36px !important;
+      width: auto !important;
+      display: block;
+    }
+    .mafia-ref-card-label {
+      flex: 1;
+      min-width: 0;
+      font-size: 0.82rem;
+      font-weight: 800;
+      line-height: 1.25;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      text-align: right;
+    }
+    .mafia-ref-ready-card.is-role-card .mafia-ref-card-label {
+      color: #fde68a;
+    }
+    body.theme-light .mafia-ref-ready-card.is-role-card .mafia-ref-card-label {
+      color: #92400e;
+    }
     /* === EXTRA_STYLES_END === */
 </style>
 </head>
@@ -10137,7 +10483,7 @@
 
     <div class="app-footer">
       <!-- === VERSION_TAG_START === -->
-      <span style="color: #16a34a; font-weight: bold;">✅ الإصدار v3.62 (تحديث مباشر داخل التطبيق مع شريط تقدم)</span>
+      <span style="color: #16a34a; font-weight: bold;">✅ الإصدار v3.63 (حذف أزرار العودة للغرفة خارج لوحة الأعضاء + حذف شريط التقدم للمضيف في المافيا + تثبيت أزرار الحكم بالأسفل)</span>
       <!-- === VERSION_TAG_END === -->
     </div>
 
@@ -14820,15 +15166,19 @@ await db.collection("rooms").doc(currentRoomCode).update({
           } else {
             this.lastSetupSignature = "";
             container.innerHTML = `
-              <div class="mafia-wrap mafia-app-layout" data-mafia-phase="setup">
-                <div class="mafia-center-flow">
-                  <div class="mafia-banner">
-                    <div style="font-size: 2.6rem; margin-bottom: 8px;">🎭</div>
-                    <h3>إعداد لعبة المافيا</h3>
-                    <p>يقوم المضيف الآن باختيار الحكم، وتحديد بطاقات البطة وترتيب أسماء الأدوار لهذه المباراة...</p>
+              <div class="mafia-wrap mafia-fixed-dock" data-mafia-phase="setup">
+                <div class="mafia-mid-scroll">
+                  <div class="mafia-mid-inner is-centered">
+                    <div class="mafia-banner">
+                      <div style="font-size: 2.6rem; margin-bottom: 8px;">🎭</div>
+                      <h3>إعداد لعبة المافيا</h3>
+                      <p>يقوم المضيف الآن باختيار الحكم، وتحديد بطاقات البطة وترتيب أسماء الأدوار لهذه المباراة...</p>
+                    </div>
                   </div>
                 </div>
-                ${this.renderWaitingProgressBar("setup", state)}
+                <div class="mafia-fixed-bottom-dock">
+                  ${this.renderWaitingProgressBar("setup", state)}
+                </div>
               </div>
             `;
           }
@@ -14851,7 +15201,7 @@ await db.collection("rooms").doc(currentRoomCode).update({
         if (wrapEl) wrapEl.setAttribute("data-mafia-phase", phase);
       },
 
-      /* === PLATFORM_V355_MAFIA_SETUP_WAIT_AND_REF_REDESIGN === */
+      /* === PLATFORM_V363_NO_LOBBY_BTN_AND_FIXED_MAFIA_DOCKS === */
       renderWaitingProgressBar(phase, state) {
         const rawStep = (state && parseInt(state.setupStep, 10)) || 1;
         const activeStep = phase === "referee_ready"
@@ -14919,31 +15269,6 @@ await db.collection("rooms").doc(currentRoomCode).update({
         } catch (e) {}
       },
 
-      openInlineLobbyConfirm() {
-        if (!currentPlayer || !currentPlayer.isHost) return;
-        const nav = document.getElementById("mafia-step1-nav");
-        const box = document.getElementById("mafia-step1-lobby-confirm");
-        if (!nav || !box) {
-          if (typeof returnToLobby === "function") returnToLobby();
-          return;
-        }
-        nav.style.display = "none";
-        box.classList.add("is-open");
-        clearTimeout(this._inlineLobbyTimer);
-        this._inlineLobbyTimer = setTimeout(() => {
-          this.cancelInlineLobbyConfirm();
-        }, 5000);
-      },
-
-      cancelInlineLobbyConfirm() {
-        clearTimeout(this._inlineLobbyTimer);
-        this._inlineLobbyTimer = null;
-        const nav = document.getElementById("mafia-step1-nav");
-        const box = document.getElementById("mafia-step1-lobby-confirm");
-        if (nav) nav.style.display = "";
-        if (box) box.classList.remove("is-open");
-      },
-
       /* =====================================================================
          1. واجهة إعداد اللعبة بواسطة المضيف (منفصلة تماماً عن الحكم)
          ===================================================================== */
@@ -14970,7 +15295,7 @@ await db.collection("rooms").doc(currentRoomCode).update({
         const selectedCount = this.hostDraft.selectedCards.length;
         const remainingCount = Math.max(0, requiredPlayers - selectedCount);
 
-        /* مزامنة خطوة الإعداد الحالية ليرى اللاعبون المنتظرون مستوى التقدم لحظياً */
+        /* مزامنة خطوة الإعداد في الخلفية ليظهر شريط التقدم للاعبين المنتظرين فقط */
         this.syncSetupStepToRoom(currentStep);
 
         const sig = participants.map(p => p.id + ":" + p.name).join("|") +
@@ -14990,26 +15315,14 @@ await db.collection("rooms").doc(currentRoomCode).update({
 
         if (participants.length < 2) {
           container.innerHTML = `
-            <div class="mafia-wrap mafia-app-layout" id="mafia-setup-root" data-mafia-phase="setup">
-              <div class="mafia-center-flow">
-                <div class="mafia-banner">
-                  <h3>🎭 إعداد لعبة المافيا</h3>
-                </div>
-                <div class="mafia-alert-box danger">
-                  ⚠️ يجب وجود مشاركين اثنين على الأقل داخل الغرفة (حكم واحد + لاعب واحد على الأقل) لبدء اللعبة.
-                </div>
-              </div>
-              <div class="mafia-bottom-dock">
-                <div class="mafia-nav-row single-btn" id="mafia-step1-nav">
-                  <button type="button" class="btn btn-secondary mafia-nav-btn is-prev" onclick="MafiaGame.openInlineLobbyConfirm()">
-                    <span>العودة للغرفة</span>
-                  </button>
-                </div>
-                <div id="mafia-step1-lobby-confirm" class="return-lobby-confirm">
-                  <span class="return-lobby-confirm-text">تأكيد العودة للغرفة؟</span>
-                  <div class="return-lobby-confirm-actions">
-                    <button type="button" class="return-confirm-icon-btn is-yes" onclick="confirmReturnToLobby()" title="تأكيد العودة للغرفة" aria-label="تأكيد">✓</button>
-                    <button type="button" class="return-confirm-icon-btn is-no" onclick="MafiaGame.cancelInlineLobbyConfirm()" title="إلغاء" aria-label="إلغاء">✕</button>
+            <div class="mafia-wrap mafia-fixed-dock" id="mafia-setup-root" data-mafia-phase="setup">
+              <div class="mafia-mid-scroll">
+                <div class="mafia-mid-inner is-centered">
+                  <div class="mafia-banner">
+                    <h3>🎭 إعداد لعبة المافيا</h3>
+                  </div>
+                  <div class="mafia-alert-box danger">
+                    ⚠️ يجب وجود مشاركين اثنين على الأقل داخل الغرفة (حكم واحد + لاعب واحد على الأقل) لبدء اللعبة.
                   </div>
                 </div>
               </div>
@@ -15018,66 +15331,18 @@ await db.collection("rooms").doc(currentRoomCode).update({
           return;
         }
 
-        /* حفظ موضع التمرير لقائمة البطاقات ومحتوى الشاشة بدقة لمنع أي قفز عند النقر */
-        const prevDeckEl = document.querySelector(".mafia-deck-grid");
-        const prevRolesEl = document.querySelector(".mafia-role-edit-list");
-        const prevScrollAreaEl = document.getElementById("game-scroll-area");
-        const prevDeckScroll = prevDeckEl ? prevDeckEl.scrollTop : 0;
-        const prevRolesScroll = prevRolesEl ? prevRolesEl.scrollTop : 0;
-        const prevScrollAreaTop = prevScrollAreaEl ? prevScrollAreaEl.scrollTop : 0;
-        const prevWinScrollY = window.scrollY || document.documentElement.scrollTop || 0;
+        /* حفظ موضع التمرير داخل المنطقة الوسطى عند البقاء في نفس الخطوة لمنع القفز */
+        const prevMidEl = container.querySelector(".mafia-mid-scroll");
+        const sameSetupStep = (this._lastHostSetupStep === currentStep);
+        const prevMidScroll = (sameSetupStep && prevMidEl) ? prevMidEl.scrollTop : 0;
+        this._lastHostSetupStep = currentStep;
 
-        /* 1. شريط المحطات الدائرية الأنيق (بدون أرقام داخل الدوائر) */
-        const stepTitles = [
-          "تحديد حكم المباراة",
-          "اختيار أوراق اللعب",
-          "تسمية الأدوار وترتيبها",
-          "القواعد الإضافية والتسليم"
-        ];
-        const progressPct = ((currentStep - 1) / 3) * 100;
-
-        const stationsHtml = [1, 2, 3, 4].map(s => {
-          const isCompleted = s < currentStep;
-          const isActive = s === currentStep;
-          const isClickable = isCompleted;
-          const cls = [
-            "mafia-station",
-            isCompleted ? "is-completed is-clickable" : "",
-            isActive ? "is-active" : "",
-            s > currentStep ? "is-upcoming" : ""
-          ].filter(Boolean).join(" ");
-
-          const clickAttr = isClickable ? `onclick="MafiaGame.goToStep(${s})"` : "";
-          return `
-            <button type="button" class="${cls}" ${clickAttr} title="المحطة ${s}: ${stepTitles[s - 1]}">
-              <span class="mafia-station-dot"></span>
-            </button>
-          `;
-        }).join("");
-
-        const stepperHtml = `
-          <div class="mafia-stepper-wrap">
-            <div class="mafia-stepper-track">
-              <div class="mafia-stepper-line">
-                <div class="mafia-stepper-progress" style="width: ${progressPct}%;"></div>
-              </div>
-              <div class="mafia-stepper-stations">
-                ${stationsHtml}
-              </div>
-            </div>
-            <div class="mafia-stepper-label">
-              <span>📍 ${stepTitles[currentStep - 1]}</span>
-              <span class="mafia-stepper-counter">${currentStep} / 4</span>
-            </div>
-          </div>
-        `;
-
-        /* 2. محتوى المحطة الحالية + الأزرار المثبتة بالأسفل */
+        /* محتوى الخطوة الحالية (إعداد المضيف) */
         let stepBodyHtml = "";
         let stepDockHtml = "";
 
         if (currentStep === 1) {
-          /* المحطة 1: تحديد الحكم + زر العودة للغرفة بجانب زر التالي في نفس الصف */
+          /* الخطوة 1: تحديد الحكم + زر التالي فقط بالأسفل */
           const refChipsHtml = participants.map(p => {
             const isSel = (this.hostDraft.refereeId === p.id);
             const isMe = (p.id === currentPlayer.id);
@@ -15111,24 +15376,14 @@ await db.collection("rooms").doc(currentRoomCode).update({
           `;
 
           stepDockHtml = `
-            <div class="mafia-nav-row" id="mafia-step1-nav">
-              <button type="button" class="btn btn-secondary mafia-nav-btn is-prev" onclick="MafiaGame.openInlineLobbyConfirm()">
-                <span>العودة للغرفة</span>
-              </button>
+            <div class="mafia-nav-row single-btn">
               <button type="button" class="btn btn-primary mafia-nav-btn is-next" ${!this.hostDraft.refereeId ? "disabled" : ""} onclick="MafiaGame.goToStep(2)">
                 <span>التالي</span>
               </button>
             </div>
-            <div id="mafia-step1-lobby-confirm" class="return-lobby-confirm">
-              <span class="return-lobby-confirm-text">تأكيد العودة للغرفة؟</span>
-              <div class="return-lobby-confirm-actions">
-                <button type="button" class="return-confirm-icon-btn is-yes" onclick="confirmReturnToLobby()" title="تأكيد العودة للغرفة" aria-label="تأكيد">✓</button>
-                <button type="button" class="return-confirm-icon-btn is-no" onclick="MafiaGame.cancelInlineLobbyConfirm()" title="إلغاء" aria-label="إلغاء">✕</button>
-              </div>
-            </div>
           `;
         } else if (currentStep === 2) {
-          /* المحطة 2: اختيار أوراق اللعب (بدون البطاقات الثلاث الإحصائية + عداد مضغوط بجانب العنوان) */
+          /* الخطوة 2: اختيار أوراق اللعب */
           const buildCardPickHtml = (card) => {
             const pickIdx = this.hostDraft.selectedCards.findIndex(sc => sc.cardId === card.id);
             const isPicked = pickIdx !== -1;
@@ -15180,7 +15435,7 @@ await db.collection("rooms").doc(currentRoomCode).update({
             </div>
           `;
         } else if (currentStep === 3) {
-          /* المحطة 3: تسمية الأدوار وترتيبها */
+          /* الخطوة 3: تسمية الأدوار وترتيبها */
           const totalSel = this.hostDraft.selectedCards.length;
           const roleEditsHtml = totalSel === 0
             ? `<p style="font-size:0.8rem; color:var(--text-muted); text-align:center; padding:8px;">يرجى العودة واختيار البطاقات أولاً.</p>`
@@ -15231,7 +15486,7 @@ await db.collection("rooms").doc(currentRoomCode).update({
             </div>
           `;
         } else if (currentStep === 4) {
-          /* المحطة 4: القواعد الإضافية والتسليم (بدون بطاقة المراجعة وبدون رسالة الاكتمال، مع تثبيت الزرين بالأسفل وتوسيط المحتوى) */
+          /* الخطوة 4: القواعد الإضافية والتسليم */
           const v = this.getSetupValidation(room);
 
           stepBodyHtml = `
@@ -15275,16 +15530,19 @@ await db.collection("rooms").doc(currentRoomCode).update({
           `;
         }
 
+        const centerCls = (currentStep === 1 || currentStep === 4) ? " is-centered" : "";
+
         container.innerHTML = `
-          <div class="mafia-wrap mafia-app-layout" id="mafia-setup-root" data-mafia-phase="setup">
-            <div class="mafia-center-flow">
-              <div class="mafia-banner">
-                <h3>🎭 إعداد لعبة المافيا</h3>
+          <div class="mafia-wrap mafia-fixed-dock" id="mafia-setup-root" data-mafia-phase="setup">
+            <div class="mafia-mid-scroll">
+              <div class="mafia-mid-inner${centerCls}">
+                <div class="mafia-banner">
+                  <h3>🎭 إعداد لعبة المافيا</h3>
+                </div>
+                ${stepBodyHtml}
               </div>
-              ${stepperHtml}
-              ${stepBodyHtml}
             </div>
-            <div class="mafia-bottom-dock">
+            <div class="mafia-fixed-bottom-dock">
               ${stepDockHtml}
             </div>
           </div>
@@ -15292,21 +15550,16 @@ await db.collection("rooms").doc(currentRoomCode).update({
 
         this.refreshHostSetupValidation(room);
 
-        /* استعادة مواضع التمرير فوراً للبقاء في نفس مكان القائمة دون أي قفز للأعلى */
-        const restoreScrolls = () => {
-          const newDeckEl = document.querySelector(".mafia-deck-grid");
-          if (newDeckEl && prevDeckScroll > 0) newDeckEl.scrollTop = prevDeckScroll;
-          const newRolesEl = document.querySelector(".mafia-role-edit-list");
-          if (newRolesEl && prevRolesScroll > 0) newRolesEl.scrollTop = prevRolesScroll;
-          const newScrollAreaEl = document.getElementById("game-scroll-area");
-          if (newScrollAreaEl && prevScrollAreaTop > 0) newScrollAreaEl.scrollTop = prevScrollAreaTop;
-          if (prevWinScrollY > 0) window.scrollTo(0, prevWinScrollY);
-        };
-        restoreScrolls();
-        if (typeof requestAnimationFrame === "function") {
-          requestAnimationFrame(restoreScrolls);
+        if (prevMidScroll > 0) {
+          const restoreMid = () => {
+            const nextMid = container.querySelector(".mafia-mid-scroll");
+            if (nextMid) nextMid.scrollTop = prevMidScroll;
+          };
+          restoreMid();
+          if (typeof requestAnimationFrame === "function") {
+            requestAnimationFrame(restoreMid);
+          }
         }
-        setTimeout(restoreScrolls, 0);
       },
 
       goToStep(targetStep) {
@@ -15518,8 +15771,23 @@ await db.collection("rooms").doc(currentRoomCode).update({
         const alivePlayers = this.getAlivePlayersList(room, state);
         const roundHistory = state.roundHistory || [];
 
-        /* مرحلة استلام الحكم قبل التوزيع العشوائي */
-        /* مرحلة استلام الحكم قبل التوزيع العشوائي: عمودان متجاوران بنفس حجم البطاقات + زر توزيع عشوائي مثبت بالأسفل */
+        /* حفظ موضع التمرير داخل المحتوى الأوسط عند التفاعل في نفس المرحلة والتبويب */
+        const prevMidEl = container.querySelector(".mafia-mid-scroll");
+        const refViewKey = phase + ":" + this.refereeTab;
+        const prevMidScroll = (this._lastRefViewKey === refViewKey && prevMidEl) ? prevMidEl.scrollTop : 0;
+        this._lastRefViewKey = refViewKey;
+
+        const restoreMidScroll = () => {
+          if (prevMidScroll <= 0) return;
+          const run = () => {
+            const nextMid = container.querySelector(".mafia-mid-scroll");
+            if (nextMid) nextMid.scrollTop = prevMidScroll;
+          };
+          run();
+          if (typeof requestAnimationFrame === "function") requestAnimationFrame(run);
+        };
+
+        /* مرحلة استلام الحكم قبل التوزيع العشوائي: زر «توزيع عشوائي» مثبت بالأسفل لا يتحرك، والوسط فقط قابل للتمرير */
         if (phase === "referee_ready") {
           const cardsList = state.selectedCards || [];
 
@@ -15554,38 +15822,40 @@ await db.collection("rooms").doc(currentRoomCode).update({
             : "";
 
           container.innerHTML = `
-            <div class="mafia-wrap mafia-app-layout is-ref-ready-screen" data-mafia-phase="referee_ready">
-              <div class="mafia-center-flow">
-                <div class="mafia-banner mafia-ref-ready-banner">
-                  <h3 class="with-whistle center">${getWhistleIcon("is-gold")} لوحة الحكم — استلام إدارة اللعبة</h3>
-                </div>
-
-                ${mismatchWarning}
-
-                <div class="mafia-ref-ready-columns">
-                  <div class="mafia-ref-ready-col">
-                    <div class="mafia-ref-ready-col-head">
-                      <span>👥 اللاعبون</span>
-                      <span class="mafia-ref-col-count">${activePlayers.length}</span>
-                    </div>
-                    <div class="mafia-ref-ready-list">
-                      ${playersColumnHtml}
-                    </div>
+            <div class="mafia-wrap mafia-fixed-dock is-ref-ready-screen" data-mafia-phase="referee_ready">
+              <div class="mafia-mid-scroll">
+                <div class="mafia-mid-inner is-centered">
+                  <div class="mafia-banner mafia-ref-ready-banner">
+                    <h3 class="with-whistle center">${getWhistleIcon("is-gold")} لوحة الحكم — استلام إدارة اللعبة</h3>
                   </div>
 
-                  <div class="mafia-ref-ready-col">
-                    <div class="mafia-ref-ready-col-head">
-                      <span>🃏 الأدوار</span>
-                      <span class="mafia-ref-col-count">${cardsList.length}</span>
+                  ${mismatchWarning}
+
+                  <div class="mafia-ref-ready-columns">
+                    <div class="mafia-ref-ready-col">
+                      <div class="mafia-ref-ready-col-head">
+                        <span>👥 اللاعبون</span>
+                        <span class="mafia-ref-col-count">${activePlayers.length}</span>
+                      </div>
+                      <div class="mafia-ref-ready-list">
+                        ${playersColumnHtml}
+                      </div>
                     </div>
-                    <div class="mafia-ref-ready-list">
-                      ${rolesColumnHtml}
+
+                    <div class="mafia-ref-ready-col">
+                      <div class="mafia-ref-ready-col-head">
+                        <span>🃏 الأدوار</span>
+                        <span class="mafia-ref-col-count">${cardsList.length}</span>
+                      </div>
+                      <div class="mafia-ref-ready-list">
+                        ${rolesColumnHtml}
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div class="mafia-bottom-dock">
+              <div class="mafia-fixed-bottom-dock">
                 <button type="button" class="btn mafia-btn-crimson"
                         ${activePlayers.length !== cardsList.length || activePlayers.length === 0 ? "disabled" : ""}
                         onclick="MafiaGame.distributeCardsRandomly()">
@@ -15594,6 +15864,7 @@ await db.collection("rooms").doc(currentRoomCode).update({
               </div>
             </div>
           `;
+          restoreMidScroll();
           return;
         }
 
@@ -15633,16 +15904,22 @@ await db.collection("rooms").doc(currentRoomCode).update({
 
         if (this.refereeTab === "history") {
           container.innerHTML = `
-            <div class="mafia-wrap">
-              ${topSummaryHtml}
-              ${this.buildRoundHistoryHtml(roundHistory)}
+            <div class="mafia-wrap mafia-fixed-dock" data-mafia-phase="${this.escapeHtml(phase)}">
+              <div class="mafia-mid-scroll">
+                <div class="mafia-mid-inner">
+                  ${topSummaryHtml}
+                  ${this.buildRoundHistoryHtml(roundHistory)}
+                </div>
+              </div>
             </div>
           `;
+          restoreMidScroll();
           return;
         }
 
-        /* عرض لوحة إدارة الجولة بحسب المرحلة */
+        /* عرض لوحة إدارة الجولة بحسب المرحلة مع تثبيت أزرار الإجراء بالأسفل */
         let mainBodyHtml = "";
+        let fixedDockHtml = "";
 
         if (phase === "distributed" || phase === "round_ready") {
           const nextRoundNum = (state.currentRound || 0) + 1;
@@ -15656,20 +15933,30 @@ await db.collection("rooms").doc(currentRoomCode).update({
               ${this.buildRefereePlayersCardsHtml(room, state, false)}
             </div>
 
-            ${alivePlayers.length > 0 ? `
-              <button type="button" class="btn mafia-btn-emerald" onclick="MafiaGame.startNextRound()">
-                ${startBtnText}
-              </button>
-            ` : `
+            ${alivePlayers.length === 0 ? `
               <div class="mafia-alert-box danger">لم يبقَ أي لاعب نشط داخل اللعبة.</div>
-            `}
+            ` : ""}
 
-            ${state.currentRound >= 1 ? `
+            ${state.currentRound >= 1 && alivePlayers.length > 0 ? `
               <button type="button" class="btn btn-secondary" onclick="MafiaGame.finishGame()">
                 🏁 إنهاء المباراة وكشف جميع الأدوار للكل
               </button>
             ` : ""}
           `;
+
+          if (alivePlayers.length > 0) {
+            fixedDockHtml = `
+              <button type="button" class="btn mafia-btn-emerald" onclick="MafiaGame.startNextRound()">
+                ${startBtnText}
+              </button>
+            `;
+          } else if (state.currentRound >= 1) {
+            fixedDockHtml = `
+              <button type="button" class="btn btn-secondary" onclick="MafiaGame.finishGame()">
+                🏁 إنهاء المباراة وكشف جميع الأدوار للكل
+              </button>
+            `;
+          }
         } else if (phase === "round_active") {
           const evalRes = this.evaluateRoundEvents(room, state);
           const cancelNoticeHtml = evalRes.mafiaKillCancelled ? `
@@ -15686,13 +15973,31 @@ await db.collection("rooms").doc(currentRoomCode).update({
               </div>
               ${this.buildRefereePlayersCardsHtml(room, state, true)}
             </div>
+          `;
 
+          fixedDockHtml = `
             <button type="button" class="btn mafia-btn-gold" onclick="MafiaGame.goToVotingStep()">
               ☀️ المدينة تصحى
             </button>
           `;
         } else if (phase === "voting_elimination") {
+          const evalRes = this.evaluateRoundEvents(room, state);
+          const killedOut = evalRes.killedOut || [];
+          const votingSelection = state.votingSelection || [];
+          const hasAnyExit = (votingSelection.length > 0 || killedOut.length > 0);
+
           mainBodyHtml = this.buildVotingEliminationHtml(room, state);
+
+          fixedDockHtml = `
+            <div class="mafia-nav-row mafia-voting-dock-row">
+              <button type="button" class="btn btn-secondary mafia-nav-btn is-prev" onclick="MafiaGame.backToRoundActions()">
+                <span>رجوع للتعديلات</span>
+              </button>
+              <button type="button" class="btn ${hasAnyExit ? "mafia-btn-crimson" : "mafia-btn-emerald"} mafia-nav-btn" onclick="MafiaGame.confirmRoundTransition()">
+                <span>تأكيد إغلاق الجولة</span>
+              </button>
+            </div>
+          `;
         } else if (phase === "game_over") {
           mainBodyHtml = `
             <div class="mafia-alert-box success">
@@ -15702,20 +16007,29 @@ await db.collection("rooms").doc(currentRoomCode).update({
               <div class="mafia-panel-title"><span>📋 التوزيع النهائي وحالات اللاعبين</span></div>
               ${this.buildRefereePlayersCardsHtml(room, state, false)}
             </div>
-            ${currentPlayer.isHost ? `
+          `;
+
+          if (currentPlayer.isHost) {
+            fixedDockHtml = `
               <button type="button" class="btn mafia-btn-gold" onclick="MafiaGame.restartNewMatch()">
                 🔄 إعداد مباراة مافيا جديدة
               </button>
-            ` : ""}
-          `;
+            `;
+          }
         }
 
         container.innerHTML = `
-          <div class="mafia-wrap">
-            ${topSummaryHtml}
-            ${mainBodyHtml}
+          <div class="mafia-wrap mafia-fixed-dock" data-mafia-phase="${this.escapeHtml(phase)}">
+            <div class="mafia-mid-scroll">
+              <div class="mafia-mid-inner">
+                ${topSummaryHtml}
+                ${mainBodyHtml}
+              </div>
+            </div>
+            ${fixedDockHtml ? `<div class="mafia-fixed-bottom-dock">${fixedDockHtml}</div>` : ""}
           </div>
         `;
+        restoreMidScroll();
       },
 
       setRefereeTab(tabName) {
@@ -15956,7 +16270,6 @@ buildRefereePlayersCardsHtml(room, state, showActionControls) {
 
       buildVotingEliminationHtml(room, state) {
         const evalRes = this.evaluateRoundEvents(room, state);
-        const killedOut = evalRes.killedOut || [];
         const eligibleForVote = evalRes.eligibleForVote || [];
         const votingSelection = state.votingSelection || [];
         const assignments = state.assignments || {};
@@ -15989,9 +16302,6 @@ buildRefereePlayersCardsHtml(room, state, showActionControls) {
               `;
             }).join("");
 
-        const hasVoteSelected = votingSelection.length > 0;
-        const hasAnyExit = hasVoteSelected || killedOut.length > 0;
-
         return `
           ${nightSummaryHtml}
 
@@ -16001,22 +16311,6 @@ buildRefereePlayersCardsHtml(room, state, showActionControls) {
             </div>
             ${voteRowsHtml}
           </div>
-
-          ${hasVoteSelected ? `
-            <button type="button" class="btn mafia-btn-crimson" onclick="MafiaGame.confirmRoundTransition()">
-              ✅ تأكيد خروج اللاعبين (${votingSelection.length + killedOut.length}) وإغلاق الجولة
-            </button>
-          ` : `
-            <button type="button" class="btn ${hasAnyExit ? "mafia-btn-crimson" : "mafia-btn-emerald"}" onclick="MafiaGame.confirmRoundTransition()">
-              ${hasAnyExit
-                ? `✅ تأكيد خروج المقتولين (${killedOut.length}) وإغلاق الجولة`
-                : "✅ تأكيد إغلاق الجولة (بدون خروج أحد)"}
-            </button>
-          `}
-
-          <button type="button" class="btn btn-secondary" onclick="MafiaGame.backToRoundActions()">
-            ↩️ رجوع لتعديل أحداث الجولة ${state.currentRound}
-          </button>
         `;
       },
 
@@ -16134,15 +16428,19 @@ buildRefereePlayersCardsHtml(room, state, showActionControls) {
 
         if (phase === "referee_ready") {
           container.innerHTML = `
-            <div class="mafia-wrap mafia-app-layout" data-mafia-phase="referee_ready">
-              <div class="mafia-center-flow">
-                <div class="mafia-banner">
-                  <div style="font-size: 2.6rem; margin-bottom: 8px;">🃏</div>
-                  <h3>تم تسليم الإدارة للحكم</h3>
-                  <p>الحكم <strong>(${this.escapeHtml(state.refereeName)})</strong> يستعد الآن لتوزيع البطاقات عشوائياً على اللاعبين...</p>
+            <div class="mafia-wrap mafia-fixed-dock" data-mafia-phase="referee_ready">
+              <div class="mafia-mid-scroll">
+                <div class="mafia-mid-inner is-centered">
+                  <div class="mafia-banner">
+                    <div style="font-size: 2.6rem; margin-bottom: 8px;">🃏</div>
+                    <h3>تم تسليم الإدارة للحكم</h3>
+                    <p>الحكم <strong>(${this.escapeHtml(state.refereeName)})</strong> يستعد الآن لتوزيع البطاقات عشوائياً على اللاعبين...</p>
+                  </div>
                 </div>
               </div>
-              ${this.renderWaitingProgressBar("referee_ready", state)}
+              <div class="mafia-fixed-bottom-dock">
+                ${this.renderWaitingProgressBar("referee_ready", state)}
+              </div>
             </div>
           `;
           return;
