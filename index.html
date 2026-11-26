@@ -10483,7 +10483,7 @@
 
     <div class="app-footer">
       <!-- === VERSION_TAG_START === -->
-      <span style="color: #16a34a; font-weight: bold;">✅ الإصدار v3.63 (حذف أزرار العودة للغرفة خارج لوحة الأعضاء + حذف شريط التقدم للمضيف في المافيا + تثبيت أزرار الحكم بالأسفل)</span>
+      <span style="color: #16a34a; font-weight: bold;">✅ الإصدار v3.64 (بث لحظي فوري للتحديثات عبر Firebase + فحص تلقائي عند العودة للتطبيق من الخلفية)</span>
       <!-- === VERSION_TAG_END === -->
     </div>
 
@@ -18905,21 +18905,23 @@ buildRefereePlayersCardsHtml(room, state, showActionControls) {
 
   <!-- === PLATFORM_V358_AUTO_UPDATE_START === -->
   <script>
-    /* === PLATFORM_V360_IN_APP_UPDATE_PROGRESS === */
+    /* === PLATFORM_V364_REALTIME_FIREBASE_UPDATES === */
     (function () {
-      if (window.__ashrahAutoUpdateV360Init) return;
-      window.__ashrahAutoUpdateV360Init = true;
+      if (window.__ashrahAutoUpdateV364Init) return;
+      window.__ashrahAutoUpdateV364Init = true;
 
       const GH_REPO = "AbdultawabDarwesh/EshrahGame";
       const RELEASE_API_URL = "https://api.github.com/repos/" + GH_REPO + "/releases/latest";
       const FALLBACK_APK_URL = "https://github.com/" + GH_REPO + "/releases/latest/download/Ashrah-latest.apk";
-      const CHECK_COOLDOWN_MS = 90000;
+      const RTDB_RELEASE_PATH = "app_meta/latest_release";
+      const API_COOLDOWN_MS = 15000;
       const DISMISSED_KEY = "eshrah_dismissed_update_tag";
 
-      let lastCheckAt = 0;
-      let isChecking = false;
+      let lastApiCheckAt = 0;
+      let isCheckingApi = false;
       let pendingUpdate = null;
       let toastEl = null;
+      let rtdbListenerAttached = false;
 
       /* حالة التحميل الداخلي: idle | downloading | installing | need_permission | error */
       let dlState = "idle";
@@ -19276,6 +19278,134 @@ buildRefereePlayersCardsHtml(room, state, showActionControls) {
         el.classList.add("is-visible");
       }
 
+      /* تقييم موحّد لبيانات الإصدار سواء وصلت لحظياً من Firebase أو من GitHub API */
+      function evaluateRemoteRelease(info) {
+        if (!info || dlState === "downloading") return;
+        const tag = String(info.tag || "").trim();
+        const verRaw = String(info.version || tag || "").trim();
+        const remoteParts = parseVersionParts(verRaw);
+        if (remoteParts.length === 0) return;
+
+        const remoteBuild = parseInt(info.buildCode, 10) || parseBuildNumber(tag);
+        const localInfo = getLocalAppInfo();
+        const cmp = compareVersionParts(remoteParts, localInfo.versionParts);
+        const isNewer = (cmp > 0) || (cmp === 0 && localInfo.buildCode > 0 && remoteBuild > localInfo.buildCode);
+
+        if (!isNewer) {
+          if (pendingUpdate) {
+            pendingUpdate = null;
+            dlState = "idle";
+            renderToast(true);
+          }
+          return;
+        }
+
+        const verText = "v" + remoteParts.join(".");
+        const displayLabel = (cmp === 0 && remoteBuild > 0) ? (verText + " #" + remoteBuild) : verText;
+        const candidateTag = tag || verText;
+        const dlUrl = String(info.downloadUrl || FALLBACK_APK_URL).trim();
+
+        /* تجنب استبدال تحديث أحدث بالفعل بتحديث أقدم من مصدر متأخر */
+        if (pendingUpdate) {
+          const prevParts = parseVersionParts(pendingUpdate.tag);
+          const prevBuild = parseBuildNumber(pendingUpdate.tag);
+          const diff = compareVersionParts(remoteParts, prevParts);
+          if (diff < 0 || (diff === 0 && remoteBuild < prevBuild)) {
+            return;
+          }
+        }
+
+        const changed = (!pendingUpdate || pendingUpdate.tag !== candidateTag || pendingUpdate.downloadUrl !== dlUrl);
+        pendingUpdate = {
+          tag: candidateTag,
+          displayLabel: displayLabel,
+          downloadUrl: dlUrl
+        };
+        if (changed) {
+          renderToast(true);
+        } else {
+          renderToast(false);
+        }
+      }
+
+      /* 1) بث لحظي فوري عبر Firebase Realtime Database (أقل من ثانية بدون انتظار 90 ثانية) */
+      function attachFirebaseLiveUpdateListener() {
+        if (rtdbListenerAttached) return;
+        try {
+          const dbRefRoot = (typeof rtdb !== "undefined" && rtdb)
+            ? rtdb
+            : (window.firebase && typeof window.firebase.database === "function" ? window.firebase.database() : null);
+          if (!dbRefRoot || typeof dbRefRoot.ref !== "function") return;
+
+          rtdbListenerAttached = true;
+          dbRefRoot.ref(RTDB_RELEASE_PATH).on("value", (snap) => {
+            try {
+              const val = snap ? snap.val() : null;
+              if (!val || typeof val !== "object") return;
+              evaluateRemoteRelease({
+                version: val.version || "",
+                buildCode: val.buildCode || 0,
+                tag: val.tag || "",
+                downloadUrl: val.downloadUrl || FALLBACK_APK_URL
+              });
+            } catch (e) {}
+          }, () => {
+            /* إذا كانت قواعد Firebase تمنع القراءة، يعمل GitHub API تلقائياً كبديل */
+          });
+        } catch (e) {}
+      }
+
+      /* 2) فحص بديل فوري عبر GitHub API عند الفتح أو العودة من الخلفية أو الغرفة */
+      async function checkForUpdates(force) {
+        if (isCheckingApi || dlState === "downloading") return;
+        if (!force && !isHomeOrLobbyActive()) return;
+        if (typeof navigator !== "undefined" && navigator.onLine === false) return;
+
+        const now = Date.now();
+        if (!force && lastApiCheckAt > 0 && (now - lastApiCheckAt) < API_COOLDOWN_MS) {
+          renderToast(false);
+          return;
+        }
+
+        isCheckingApi = true;
+        lastApiCheckAt = now;
+
+        try {
+          const resp = await fetch(RELEASE_API_URL, {
+            method: "GET",
+            cache: "no-store",
+            headers: { "Accept": "application/vnd.github+json" }
+          });
+          if (!resp || !resp.ok) return;
+
+          const data = await resp.json();
+          if (!data || data.draft) return;
+
+          const tag = String(data.tag_name || "").trim();
+          const releaseName = String(data.name || "").trim();
+          let downloadUrl = FALLBACK_APK_URL;
+          if (Array.isArray(data.assets)) {
+            const apkAsset =
+              data.assets.find((a) => a && typeof a.name === "string" && a.name.toLowerCase() === "ashrah-latest.apk") ||
+              data.assets.find((a) => a && typeof a.name === "string" && a.name.toLowerCase().endsWith(".apk"));
+            if (apkAsset && apkAsset.browser_download_url) {
+              downloadUrl = apkAsset.browser_download_url;
+            }
+          }
+
+          evaluateRemoteRelease({
+            version: tag || releaseName,
+            buildCode: parseBuildNumber(tag),
+            tag: tag,
+            downloadUrl: downloadUrl
+          });
+        } catch (e) {
+          /* فحص صامت عند عدم توفر الإنترنت */
+        } finally {
+          isCheckingApi = false;
+        }
+      }
+
       /* استقبال تقدم وحالة التحميل من أندرويد مباشرة */
       window.__ashrahOnUpdateProgress = function (pct, loaded, total) {
         dlPct = typeof pct === "number" ? pct : -1;
@@ -19296,80 +19426,14 @@ buildRefereePlayersCardsHtml(room, state, showActionControls) {
         renderToast(true);
       };
 
-      async function checkForUpdates(force) {
-        if (isChecking || dlState === "downloading") return;
-        if (!force && !isHomeOrLobbyActive()) return;
-        if (typeof navigator !== "undefined" && navigator.onLine === false) return;
-
-        const now = Date.now();
-        if (!force && lastCheckAt > 0 && (now - lastCheckAt) < CHECK_COOLDOWN_MS) {
-          renderToast(false);
-          return;
-        }
-
-        isChecking = true;
-        lastCheckAt = now;
-
-        try {
-          const resp = await fetch(RELEASE_API_URL, {
-            method: "GET",
-            cache: "no-store",
-            headers: { "Accept": "application/vnd.github+json" }
-          });
-          if (!resp || !resp.ok) return;
-
-          const data = await resp.json();
-          if (!data || data.draft) return;
-
-          const tag = String(data.tag_name || "").trim();
-          const releaseName = String(data.name || "").trim();
-          const remoteParts = parseVersionParts(tag || releaseName);
-          if (remoteParts.length === 0) return;
-
-          const remoteBuild = parseBuildNumber(tag);
-          const localInfo = getLocalAppInfo();
-          const cmp = compareVersionParts(remoteParts, localInfo.versionParts);
-          const isNewer = (cmp > 0) || (cmp === 0 && localInfo.buildCode > 0 && remoteBuild > localInfo.buildCode);
-
-          if (!isNewer) {
-            pendingUpdate = null;
-            dlState = "idle";
-            renderToast(true);
-            return;
-          }
-
-          let downloadUrl = FALLBACK_APK_URL;
-          if (Array.isArray(data.assets)) {
-            const apkAsset =
-              data.assets.find((a) => a && typeof a.name === "string" && a.name.toLowerCase() === "ashrah-latest.apk") ||
-              data.assets.find((a) => a && typeof a.name === "string" && a.name.toLowerCase().endsWith(".apk"));
-            if (apkAsset && apkAsset.browser_download_url) {
-              downloadUrl = apkAsset.browser_download_url;
-            }
-          }
-
-          const verText = "v" + remoteParts.join(".");
-          const displayLabel = (cmp === 0 && remoteBuild > 0) ? (verText + " #" + remoteBuild) : verText;
-
-          pendingUpdate = {
-            tag: tag || verText,
-            displayLabel: displayLabel,
-            downloadUrl: downloadUrl
-          };
-          renderToast(true);
-        } catch (e) {
-          /* فحص صامت عند عدم توفر الإنترنت */
-        } finally {
-          isChecking = false;
-        }
-      }
-
       window.checkAshrahAppUpdate = function (force) {
         return checkForUpdates(Boolean(force));
       };
 
       function initAutoUpdateHooks() {
-        if (typeof window.showScreen === "function" && !window.showScreen.__v360UpdateWrapped) {
+        attachFirebaseLiveUpdateListener();
+
+        if (typeof window.showScreen === "function" && !window.showScreen.__v364UpdateWrapped) {
           const origShowScreen = window.showScreen;
           const wrappedShow = function (screenId) {
             const res = origShowScreen.apply(this, arguments);
@@ -19381,15 +19445,39 @@ buildRefereePlayersCardsHtml(room, state, showActionControls) {
             }
             return res;
           };
-          wrappedShow.__v360UpdateWrapped = true;
+          wrappedShow.__v364UpdateWrapped = true;
           window.showScreen = wrappedShow;
         }
 
+        /* فحص فوري عند العودة للتطبيق من الخلفية أو عودة الإنترنت */
+        document.addEventListener("visibilitychange", () => {
+          if (document.visibilityState === "visible" && isHomeOrLobbyActive()) {
+            attachFirebaseLiveUpdateListener();
+            renderToast(false);
+            checkForUpdates(false);
+          }
+        });
+
+        window.addEventListener("focus", () => {
+          if (isHomeOrLobbyActive()) {
+            renderToast(false);
+            checkForUpdates(false);
+          }
+        });
+
+        window.addEventListener("online", () => {
+          attachFirebaseLiveUpdateListener();
+          if (isHomeOrLobbyActive()) {
+            checkForUpdates(true);
+          }
+        });
+
         setTimeout(() => {
+          attachFirebaseLiveUpdateListener();
           if (isHomeOrLobbyActive()) {
             checkForUpdates(false);
           }
-        }, 1200);
+        }, 900);
       }
 
       if (document.readyState === "loading") {
