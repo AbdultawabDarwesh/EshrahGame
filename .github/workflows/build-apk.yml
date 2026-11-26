@@ -162,7 +162,7 @@ jobs:
           # 2) حقن جسر الأشرطة + محمّل التحديث الداخلي مع شريط التقدم في MainActivity
           MARKER = "ASHRAH_SYSTEM_BARS_BRIDGE_V4"
 
-          JAVA_HELPERS = """
+          JAVA_HELPERS = r"""
               /* ASHRAH_SYSTEM_BARS_BRIDGE_V4 */
               private android.webkit.WebView ashrahWebView;
               private android.view.View ashrahStatusBarBg;
@@ -296,7 +296,7 @@ jobs:
                           launchAshrahApkInstaller();
                       } catch (Exception e) {
                           ashrahDownloading = false;
-                          String safeErr = String.valueOf(e.getMessage()).replace("\\", "").replace("'", "");
+                          String safeErr = String.valueOf(e.getMessage()).replace("\\", "").replace("'", "").replace("\n", " ").replace("\r", " ");
                           notifyAshrahWeb("if(window.__ashrahOnUpdateState)window.__ashrahOnUpdateState('error','" + safeErr + "');");
                       } finally {
                           try { if (in != null) in.close(); } catch (Exception ignored) {}
@@ -343,7 +343,7 @@ jobs:
                           notifyAshrahWeb("if(window.__ashrahOnUpdateState)window.__ashrahOnUpdateState('installing','');");
                           startActivity(installIntent);
                       } catch (Exception e) {
-                          String safeErr = String.valueOf(e.getMessage()).replace("\\", "").replace("'", "");
+                          String safeErr = String.valueOf(e.getMessage()).replace("\\", "").replace("'", "").replace("\n", " ").replace("\r", " ");
                           notifyAshrahWeb("if(window.__ashrahOnUpdateState)window.__ashrahOnUpdateState('error','" + safeErr + "');");
                       }
                   });
@@ -539,7 +539,7 @@ jobs:
               }
           """
 
-          KOTLIN_HELPERS = """
+          KOTLIN_HELPERS = r"""
               /* ASHRAH_SYSTEM_BARS_BRIDGE_V4 */
               private var ashrahWebView: android.webkit.WebView? = null
               private var ashrahStatusBarBg: android.view.View? = null
@@ -659,7 +659,7 @@ jobs:
                           launchAshrahApkInstaller()
                       } catch (e: Exception) {
                           ashrahDownloading = false
-                          val safeErr = (e.message ?: "").replace("\\", "").replace("'", "")
+                          val safeErr = (e.message ?: "").replace("\\", "").replace("'", "").replace("\n", " ").replace("\r", " ")
                           notifyAshrahWeb("if(window.__ashrahOnUpdateState)window.__ashrahOnUpdateState('error','$safeErr');")
                       } finally {
                           try { input?.close() } catch (_: Exception) {}
@@ -707,7 +707,7 @@ jobs:
                           notifyAshrahWeb("if(window.__ashrahOnUpdateState)window.__ashrahOnUpdateState('installing','');")
                           startActivity(installIntent)
                       } catch (e: Exception) {
-                          val safeErr = (e.message ?: "").replace("\\", "").replace("'", "")
+                          val safeErr = (e.message ?: "").replace("\\", "").replace("'", "").replace("\n", " ").replace("\r", " ")
                           notifyAshrahWeb("if(window.__ashrahOnUpdateState)window.__ashrahOnUpdateState('error','$safeErr');")
                       }
                   }
