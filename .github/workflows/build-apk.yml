@@ -11,11 +11,39 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: unzip -o ashrah-android-github.zip -d project
-      - run: |
+      - name: Sync Web Assets and Version
+        id: ver
+        run: |
           if [ -f index.html ]; then
             cp index.html project/app/src/main/assets/index.html
           fi
-          sed -i "s/versionCode 1/versionCode ${{ github.run_number }}/" project/app/build.gradle
+          python3 - << 'PYEOF'
+          import os, re
+
+          ver = "1.0"
+          if os.path.exists("index.html"):
+              with open("index.html", "r", encoding="utf-8") as f:
+                  txt = f.read()
+              m = re.search(r"الإصدار\s*v([0-9]+(?:\.[0-9]+)*)", txt)
+              if m:
+                  ver = m.group(1)
+
+          run_num = os.environ.get("GITHUB_RUN_NUMBER", "1")
+          for gf in ["project/app/build.gradle", "project/app/build.gradle.kts"]:
+              if os.path.exists(gf):
+                  with open(gf, "r", encoding="utf-8") as f:
+                      g = f.read()
+                  g = re.sub(r"(versionCode\s*=?\s*)\d+", rf"\g<1>{run_num}", g, count=1)
+                  g = re.sub(r'(versionName\s*=?\s*)"[^"]*"', rf'\g<1>"{ver}"', g, count=1)
+                  with open(gf, "w", encoding="utf-8") as f:
+                      f.write(g)
+
+          gh_out = os.environ.get("GITHUB_OUTPUT")
+          if gh_out:
+              with open(gh_out, "a", encoding="utf-8") as f:
+                  f.write(f"app_ver={ver}\n")
+          print(f"✅ الإصدار المستخرج: v{ver} | versionCode={run_num}")
+          PYEOF
           cat << 'EOF' >> project/app/build.gradle
           dependencies {
               implementation platform('org.jetbrains.kotlin:kotlin-bom:1.8.22')
@@ -26,10 +54,10 @@ jobs:
           python3 - << 'PYEOF'
           import os, re, sys
 
-          MARKER = "ASHRAH_SYSTEM_BARS_BRIDGE_V1"
+          MARKER = "ASHRAH_SYSTEM_BARS_BRIDGE_V2"
 
           JAVA_HELPERS = """
-              /* ASHRAH_SYSTEM_BARS_BRIDGE_V1 */
+              /* ASHRAH_SYSTEM_BARS_BRIDGE_V2 */
               private android.view.View ashrahStatusBarBg;
               private android.view.View ashrahNavBarBg;
               private int ashrahTopColor = android.graphics.Color.parseColor("#faf2db");
@@ -46,7 +74,7 @@ jobs:
               }
 
               private void setupAshrahEdgeToEdgeIfNeeded() {
-                  if (android.os.Build.VERSION.SDK_INT < 35) return;
+                  if (android.os.Build.VERSION.SDK_INT < 35 || getApplicationInfo().targetSdkVersion < 35) return;
                   try {
                       final android.view.Window window = getWindow();
                       if (window == null) return;
@@ -103,7 +131,7 @@ jobs:
                           if (contentView != null) {
                               contentView.setPadding(bars.left, bars.top, bars.right, bars.bottom);
                           }
-                          return v.onApplyWindowInsets(insets);
+                          return android.view.WindowInsets.CONSUMED;
                       });
                       decorFrame.requestApplyInsets();
                   } catch (Exception ignored) {}
@@ -181,7 +209,7 @@ jobs:
           """
 
           KOTLIN_HELPERS = """
-              /* ASHRAH_SYSTEM_BARS_BRIDGE_V1 */
+              /* ASHRAH_SYSTEM_BARS_BRIDGE_V2 */
               private var ashrahStatusBarBg: android.view.View? = null
               private var ashrahNavBarBg: android.view.View? = null
               private var ashrahTopColor: Int = android.graphics.Color.parseColor("#faf2db")
@@ -196,7 +224,7 @@ jobs:
               }
 
               private fun setupAshrahEdgeToEdgeIfNeeded() {
-                  if (android.os.Build.VERSION.SDK_INT < 35) return
+                  if (android.os.Build.VERSION.SDK_INT < 35 || applicationInfo.targetSdkVersion < 35) return
                   try {
                       val w = window ?: return
                       val decorFrame = w.decorView as? android.widget.FrameLayout ?: return
@@ -233,7 +261,7 @@ jobs:
                           )
                       }
 
-                      decorFrame.setOnApplyWindowInsetsListener { v, insets ->
+                      decorFrame.setOnApplyWindowInsetsListener { _, insets ->
                           val bars = insets.getInsets(android.view.WindowInsets.Type.systemBars())
                           ashrahStatusBarBg?.let { bar ->
                               val lp = bar.layoutParams
@@ -250,7 +278,7 @@ jobs:
                               }
                           }
                           contentView?.setPadding(bars.left, bars.top, bars.right, bars.bottom)
-                          v.onApplyWindowInsets(insets)
+                          android.view.WindowInsets.CONSUMED
                       }
                       decorFrame.requestApplyInsets()
                   } catch (_: Exception) {}
@@ -385,6 +413,30 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
+      - name: Setup Persistent Debug Keystore
+        run: |
+          mkdir -p ~/.android
+          if [ -f ashrah-debug.keystore ]; then
+            cp ashrah-debug.keystore ~/.android/debug.keystore
+            echo "✅ تم استخدام مفتاح التوقيع الثابت للتحديث المباشر."
+          else
+            keytool -genkey -v \
+              -keystore ashrah-debug.keystore \
+              -storepass android \
+              -alias androiddebugkey \
+              -keypass android \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -dname "CN=Ashrah Debug,O=Ashrah,C=YE"
+            cp ashrah-debug.keystore ~/.android/debug.keystore
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add ashrah-debug.keystore
+            git commit -m "chore: save persistent signing keystore [skip ci]"
+            git push origin HEAD
+            echo "✅ تم إنشاء وحفظ مفتاح التوقيع الثابت في المستودع بنجاح."
+          fi
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.7'
@@ -397,7 +449,11 @@ jobs:
           path: Ashrah-latest.apk
       - uses: softprops/action-gh-release@v2
         with:
-          tag_name: latest
-          name: تطبيق عشرة (آخر إصدار)
+          tag_name: v${{ steps.ver.outputs.app_ver }}-b${{ github.run_number }}
+          name: تطبيق عشرة — الإصدار v${{ steps.ver.outputs.app_ver }} (بناء #${{ github.run_number }})
+          body: |
+            إصدار جديد جاهز للتحميل والتحديث المباشر فوق النسخة السابقة.
+            - رابط التحميل المباشر الدائم لآخر نسخة:
+              https://github.com/${{ github.repository }}/releases/latest/download/Ashrah-latest.apk
           files: Ashrah-latest.apk
           make_latest: true
