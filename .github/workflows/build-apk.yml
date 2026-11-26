@@ -5,11 +5,16 @@ on:
   workflow_dispatch:
 permissions:
   contents: write
+concurrency:
+  group: build-ashrah-apk
+  cancel-in-progress: false
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - run: unzip -o ashrah-android-github.zip -d project
       - name: Sync Web Assets and Version
         id: ver
@@ -44,33 +49,304 @@ jobs:
                   f.write(f"app_ver={ver}\n")
           print(f"✅ الإصدار المستخرج: v{ver} | versionCode={run_num}")
           PYEOF
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+      - name: Setup Persistent Signing Keystore
+        run: |
+          mkdir -p ~/.android
+          git fetch origin "${GITHUB_REF_NAME}" || true
+          if [ ! -f ashrah-debug.keystore ]; then
+            git checkout "origin/${GITHUB_REF_NAME}" -- ashrah-debug.keystore 2>/dev/null || true
+          fi
+          if [ -f ashrah-debug.keystore ]; then
+            echo "✅ تم العثور على مفتاح التوقيع الثابت في المستودع."
+          else
+            keytool -genkey -v \
+              -keystore ashrah-debug.keystore \
+              -storetype PKCS12 \
+              -storepass android \
+              -alias androiddebugkey \
+              -keypass android \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -dname "CN=Ashrah Debug,O=Ashrah,C=YE"
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add ashrah-debug.keystore
+            git commit -m "chore: save persistent signing keystore [skip ci]"
+            git push origin HEAD || (git pull --rebase origin "${GITHUB_REF_NAME}" && git push origin HEAD)
+            echo "✅ تم إنشاء وحفظ مفتاح التوقيع الثابت في المستودع بنجاح."
+          fi
+          cp ashrah-debug.keystore ~/.android/debug.keystore
+          cp ashrah-debug.keystore project/app/ashrah-debug.keystore
           cat << 'EOF' >> project/app/build.gradle
+
+          android {
+              signingConfigs {
+                  debug {
+                      storeFile file("ashrah-debug.keystore")
+                      storePassword "android"
+                      keyAlias "androiddebugkey"
+                      keyPassword "android"
+                  }
+              }
+              buildTypes {
+                  debug {
+                      signingConfig signingConfigs.debug
+                  }
+              }
+          }
+
           dependencies {
               implementation platform('org.jetbrains.kotlin:kotlin-bom:1.8.22')
           }
           EOF
-      - name: Patch Android System Bars & Update Bridge
+          python3 - << 'PYEOF'
+          import os
+          gf = "project/app/build.gradle"
+          if os.path.exists(gf):
+              with open(gf, "r", encoding="utf-8") as f:
+                  g = f.read()
+              if "androidx.core" not in g and "androidx.appcompat" not in g:
+                  with open(gf, "a", encoding="utf-8") as f:
+                      f.write("\ndependencies {\n    implementation 'androidx.core:core:1.9.0'\n}\n")
+                  print("✅ تمت إضافة androidx.core لدعم FileProvider.")
+          PYEOF
+      - name: Patch Android System Bars & In-App Updater
         run: |
           python3 - << 'PYEOF'
           import os, re, sys
 
-          MARKER = "ASHRAH_SYSTEM_BARS_BRIDGE_V3"
+          # 1) تجهيز FileProvider وصلاحية تثبيت التحديثات داخل AndroidManifest.xml
+          xml_dir = "project/app/src/main/res/xml"
+          os.makedirs(xml_dir, exist_ok=True)
+          file_paths_xml = """<?xml version="1.0" encoding="utf-8"?>
+          <paths>
+              <cache-path name="ashrah_updates" path="updates/" />
+              <external-cache-path name="ashrah_ext_updates" path="updates/" />
+              <files-path name="ashrah_files_updates" path="updates/" />
+          </paths>
+          """
+          with open(os.path.join(xml_dir, "ashrah_file_paths.xml"), "w", encoding="utf-8") as f:
+              f.write("\n".join(line.strip() for line in file_paths_xml.strip().splitlines()) + "\n")
+
+          manifest_path = "project/app/src/main/AndroidManifest.xml"
+          if os.path.exists(manifest_path):
+              with open(manifest_path, "r", encoding="utf-8") as f:
+                  mf = f.read()
+              if "android.permission.REQUEST_INSTALL_PACKAGES" not in mf:
+                  mf = mf.replace(
+                      "<application",
+                      '    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />\n\n    <application',
+                      1,
+                  )
+              if "ashrah.fileprovider" not in mf:
+                  provider_xml = """        <provider
+                      android:name="androidx.core.content.FileProvider"
+                      android:authorities="${applicationId}.ashrah.fileprovider"
+                      android:exported="false"
+                      android:grantUriPermissions="true">
+                      <meta-data
+                          android:name="android.support.FILE_PROVIDER_PATHS"
+                          android:resource="@xml/ashrah_file_paths" />
+                  </provider>
+              </application>"""
+                  mf = mf.replace("</application>", provider_xml, 1)
+              with open(manifest_path, "w", encoding="utf-8") as f:
+                  f.write(mf)
+              print("✅ تم تحديث AndroidManifest.xml بصلاحية التثبيت وFileProvider.")
+
+          # 2) حقن جسر الأشرطة + محمّل التحديث الداخلي مع شريط التقدم في MainActivity
+          MARKER = "ASHRAH_SYSTEM_BARS_BRIDGE_V4"
 
           JAVA_HELPERS = """
-              /* ASHRAH_SYSTEM_BARS_BRIDGE_V3 */
+              /* ASHRAH_SYSTEM_BARS_BRIDGE_V4 */
+              private android.webkit.WebView ashrahWebView;
               private android.view.View ashrahStatusBarBg;
               private android.view.View ashrahNavBarBg;
               private int ashrahTopColor = android.graphics.Color.parseColor("#faf2db");
               private int ashrahBottomColor = android.graphics.Color.parseColor("#f0eadc");
+              private volatile boolean ashrahCancelDownload = false;
+              private volatile boolean ashrahDownloading = false;
+              private java.io.File ashrahDownloadedApkFile = null;
 
               private void setupAshrahSystemBars(android.webkit.WebView webView) {
                   try {
+                      this.ashrahWebView = webView;
                       setupAshrahEdgeToEdgeIfNeeded();
                       applyAshrahBarColors("#faf2db", "#f0eadc", true);
                       if (webView != null) {
                           webView.addJavascriptInterface(new AshrahSystemBarsBridge(), "AshrahSystemBars");
                       }
                   } catch (Exception ignored) {}
+              }
+
+              private void notifyAshrahWeb(final String jsCode) {
+                  runOnUiThread(() -> {
+                      try {
+                          if (ashrahWebView != null) {
+                              ashrahWebView.evaluateJavascript(jsCode, null);
+                          }
+                      } catch (Exception ignored) {}
+                  });
+              }
+
+              private void startAshrahApkDownload(final String urlStr) {
+                  if (urlStr == null) return;
+                  final String cleanUrl = urlStr.trim();
+                  if (!cleanUrl.startsWith("https://") && !cleanUrl.startsWith("http://")) return;
+                  if (ashrahDownloading) return;
+
+                  ashrahCancelDownload = false;
+                  ashrahDownloading = true;
+                  notifyAshrahWeb("if(window.__ashrahOnUpdateState)window.__ashrahOnUpdateState('downloading','');");
+                  notifyAshrahWeb("if(window.__ashrahOnUpdateProgress)window.__ashrahOnUpdateProgress(0,0,-1);");
+
+                  new Thread(() -> {
+                      java.net.HttpURLConnection conn = null;
+                      java.io.InputStream in = null;
+                      java.io.FileOutputStream out = null;
+                      try {
+                          String currentUrl = cleanUrl;
+                          int redirects = 0;
+                          while (redirects < 8) {
+                              java.net.URL u = new java.net.URL(currentUrl);
+                              conn = (java.net.HttpURLConnection) u.openConnection();
+                              conn.setInstanceFollowRedirects(false);
+                              conn.setConnectTimeout(20000);
+                              conn.setReadTimeout(30000);
+                              conn.setRequestProperty("User-Agent", "AshrahApp/1.0");
+                              conn.connect();
+                              int code = conn.getResponseCode();
+                              if (code == 301 || code == 302 || code == 303 || code == 307 || code == 308) {
+                                  String loc = conn.getHeaderField("Location");
+                                  conn.disconnect();
+                                  if (loc == null || loc.trim().isEmpty()) throw new Exception("Empty redirect");
+                                  currentUrl = new java.net.URL(u, loc).toString();
+                                  redirects++;
+                                  continue;
+                              }
+                              if (code < 200 || code >= 300) {
+                                  throw new Exception("HTTP " + code);
+                              }
+                              break;
+                          }
+                          if (conn == null) throw new Exception("Connection failed");
+
+                          long totalBytes = (android.os.Build.VERSION.SDK_INT >= 24)
+                              ? conn.getContentLengthLong()
+                              : conn.getContentLength();
+
+                          java.io.File dir = new java.io.File(getCacheDir(), "updates");
+                          if (!dir.exists()) dir.mkdirs();
+                          java.io.File outFile = new java.io.File(dir, "Ashrah-update.apk");
+                          if (outFile.exists()) outFile.delete();
+
+                          in = new java.io.BufferedInputStream(conn.getInputStream());
+                          out = new java.io.FileOutputStream(outFile);
+
+                          byte[] buf = new byte[16384];
+                          long downloaded = 0;
+                          int read;
+                          long lastEmit = 0;
+                          int lastPct = -1;
+
+                          while ((read = in.read(buf)) != -1) {
+                              if (ashrahCancelDownload) {
+                                  try { out.close(); } catch (Exception ignored) {}
+                                  if (outFile.exists()) outFile.delete();
+                                  ashrahDownloading = false;
+                                  notifyAshrahWeb("if(window.__ashrahOnUpdateState)window.__ashrahOnUpdateState('cancelled','');");
+                                  return;
+                              }
+                              out.write(buf, 0, read);
+                              downloaded += read;
+                              long now = System.currentTimeMillis();
+                              int pct = (totalBytes > 0) ? (int) Math.min(100, (downloaded * 100L) / totalBytes) : -1;
+                              if (now - lastEmit >= 120 || (pct >= 0 && pct != lastPct)) {
+                                  lastEmit = now;
+                                  lastPct = pct;
+                                  final int fPct = pct;
+                                  final long fDown = downloaded;
+                                  final long fTot = totalBytes;
+                                  notifyAshrahWeb(
+                                      "if(window.__ashrahOnUpdateProgress)window.__ashrahOnUpdateProgress("
+                                      + fPct + "," + fDown + "," + fTot + ");"
+                                  );
+                              }
+                          }
+                          out.flush();
+                          out.close();
+                          out = null;
+
+                          if (!outFile.exists() || outFile.length() < 50000) {
+                              throw new Exception("ملف التحديث غير مكتمل");
+                          }
+
+                          ashrahDownloadedApkFile = outFile;
+                          ashrahDownloading = false;
+                          final long finalSize = outFile.length();
+                          notifyAshrahWeb(
+                              "if(window.__ashrahOnUpdateProgress)window.__ashrahOnUpdateProgress(100,"
+                              + finalSize + "," + finalSize + ");"
+                          );
+                          launchAshrahApkInstaller();
+                      } catch (Exception e) {
+                          ashrahDownloading = false;
+                          String safeErr = String.valueOf(e.getMessage()).replace("\\", "").replace("'", "");
+                          notifyAshrahWeb("if(window.__ashrahOnUpdateState)window.__ashrahOnUpdateState('error','" + safeErr + "');");
+                      } finally {
+                          try { if (in != null) in.close(); } catch (Exception ignored) {}
+                          try { if (out != null) out.close(); } catch (Exception ignored) {}
+                          try { if (conn != null) conn.disconnect(); } catch (Exception ignored) {}
+                      }
+                  }).start();
+              }
+
+              private void launchAshrahApkInstaller() {
+                  runOnUiThread(() -> {
+                      try {
+                          java.io.File apkFile = ashrahDownloadedApkFile;
+                          if (apkFile == null || !apkFile.exists()) {
+                              apkFile = new java.io.File(new java.io.File(getCacheDir(), "updates"), "Ashrah-update.apk");
+                          }
+                          if (!apkFile.exists()) {
+                              notifyAshrahWeb("if(window.__ashrahOnUpdateState)window.__ashrahOnUpdateState('error','الملف غير موجود');");
+                              return;
+                          }
+
+                          if (android.os.Build.VERSION.SDK_INT >= 26 && !getPackageManager().canRequestPackageInstalls()) {
+                              notifyAshrahWeb("if(window.__ashrahOnUpdateState)window.__ashrahOnUpdateState('need_permission','');");
+                              android.content.Intent permIntent = new android.content.Intent(
+                                  android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                                  android.net.Uri.parse("package:" + getPackageName())
+                              );
+                              permIntent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+                              startActivity(permIntent);
+                              return;
+                          }
+
+                          android.net.Uri apkUri = androidx.core.content.FileProvider.getUriForFile(
+                              this,
+                              getPackageName() + ".ashrah.fileprovider",
+                              apkFile
+                          );
+                          android.content.Intent installIntent = new android.content.Intent(android.content.Intent.ACTION_VIEW);
+                          installIntent.setDataAndType(apkUri, "application/vnd.android.package-archive");
+                          installIntent.addFlags(
+                              android.content.Intent.FLAG_ACTIVITY_NEW_TASK |
+                              android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                          );
+                          notifyAshrahWeb("if(window.__ashrahOnUpdateState)window.__ashrahOnUpdateState('installing','');");
+                          startActivity(installIntent);
+                      } catch (Exception e) {
+                          String safeErr = String.valueOf(e.getMessage()).replace("\\", "").replace("'", "");
+                          notifyAshrahWeb("if(window.__ashrahOnUpdateState)window.__ashrahOnUpdateState('error','" + safeErr + "');");
+                      }
+                  });
               }
 
               private void setupAshrahEdgeToEdgeIfNeeded() {
@@ -224,6 +500,21 @@ jobs:
                   }
 
                   @android.webkit.JavascriptInterface
+                  public void downloadAndInstallApk(final String url) {
+                      startAshrahApkDownload(url);
+                  }
+
+                  @android.webkit.JavascriptInterface
+                  public void cancelApkDownload() {
+                      ashrahCancelDownload = true;
+                  }
+
+                  @android.webkit.JavascriptInterface
+                  public void installDownloadedApk() {
+                      launchAshrahApkInstaller();
+                  }
+
+                  @android.webkit.JavascriptInterface
                   public int getAppBuildCode() {
                       try {
                           android.content.pm.PackageInfo pInfo = getPackageManager().getPackageInfo(getPackageName(), 0);
@@ -249,18 +540,177 @@ jobs:
           """
 
           KOTLIN_HELPERS = """
-              /* ASHRAH_SYSTEM_BARS_BRIDGE_V3 */
+              /* ASHRAH_SYSTEM_BARS_BRIDGE_V4 */
+              private var ashrahWebView: android.webkit.WebView? = null
               private var ashrahStatusBarBg: android.view.View? = null
               private var ashrahNavBarBg: android.view.View? = null
               private var ashrahTopColor: Int = android.graphics.Color.parseColor("#faf2db")
               private var ashrahBottomColor: Int = android.graphics.Color.parseColor("#f0eadc")
+              @Volatile private var ashrahCancelDownload: Boolean = false
+              @Volatile private var ashrahDownloading: Boolean = false
+              private var ashrahDownloadedApkFile: java.io.File? = null
 
               private fun setupAshrahSystemBars(webView: android.webkit.WebView?) {
                   try {
+                      this.ashrahWebView = webView
                       setupAshrahEdgeToEdgeIfNeeded()
                       applyAshrahBarColors("#faf2db", "#f0eadc", true)
                       webView?.addJavascriptInterface(AshrahSystemBarsBridge(), "AshrahSystemBars")
                   } catch (_: Exception) {}
+              }
+
+              private fun notifyAshrahWeb(jsCode: String) {
+                  runOnUiThread {
+                      try {
+                          ashrahWebView?.evaluateJavascript(jsCode, null)
+                      } catch (_: Exception) {}
+                  }
+              }
+
+              private fun startAshrahApkDownload(urlStr: String?) {
+                  val cleanUrl = urlStr?.trim() ?: return
+                  if (!cleanUrl.startsWith("https://") && !cleanUrl.startsWith("http://")) return
+                  if (ashrahDownloading) return
+
+                  ashrahCancelDownload = false
+                  ashrahDownloading = true
+                  notifyAshrahWeb("if(window.__ashrahOnUpdateState)window.__ashrahOnUpdateState('downloading','');")
+                  notifyAshrahWeb("if(window.__ashrahOnUpdateProgress)window.__ashrahOnUpdateProgress(0,0,-1);")
+
+                  Thread {
+                      var conn: java.net.HttpURLConnection? = null
+                      var input: java.io.InputStream? = null
+                      var output: java.io.FileOutputStream? = null
+                      try {
+                          var currentUrl = cleanUrl
+                          var redirects = 0
+                          while (redirects < 8) {
+                              val u = java.net.URL(currentUrl)
+                              conn = u.openConnection() as java.net.HttpURLConnection
+                              conn.instanceFollowRedirects = false
+                              conn.connectTimeout = 20000
+                              conn.readTimeout = 30000
+                              conn.setRequestProperty("User-Agent", "AshrahApp/1.0")
+                              conn.connect()
+                              val code = conn.responseCode
+                              if (code == 301 || code == 302 || code == 303 || code == 307 || code == 308) {
+                                  val loc = conn.getHeaderField("Location")
+                                  conn.disconnect()
+                                  if (loc.isNullOrBlank()) throw Exception("Empty redirect")
+                                  currentUrl = java.net.URL(u, loc).toString()
+                                  redirects++
+                                  continue
+                              }
+                              if (code < 200 || code >= 300) throw Exception("HTTP $code")
+                              break
+                          }
+                          val activeConn = conn ?: throw Exception("Connection failed")
+                          val totalBytes = if (android.os.Build.VERSION.SDK_INT >= 24) {
+                              activeConn.contentLengthLong
+                          } else {
+                              activeConn.contentLength.toLong()
+                          }
+
+                          val dir = java.io.File(cacheDir, "updates")
+                          if (!dir.exists()) dir.mkdirs()
+                          val outFile = java.io.File(dir, "Ashrah-update.apk")
+                          if (outFile.exists()) outFile.delete()
+
+                          input = java.io.BufferedInputStream(activeConn.inputStream)
+                          output = java.io.FileOutputStream(outFile)
+
+                          val buf = ByteArray(16384)
+                          var downloaded = 0L
+                          var lastEmit = 0L
+                          var lastPct = -1
+
+                          while (true) {
+                              val read = input.read(buf)
+                              if (read == -1) break
+                              if (ashrahCancelDownload) {
+                                  try { output.close() } catch (_: Exception) {}
+                                  if (outFile.exists()) outFile.delete()
+                                  ashrahDownloading = false
+                                  notifyAshrahWeb("if(window.__ashrahOnUpdateState)window.__ashrahOnUpdateState('cancelled','');")
+                                  return@Thread
+                              }
+                              output.write(buf, 0, read)
+                              downloaded += read
+                              val now = System.currentTimeMillis()
+                              val pct = if (totalBytes > 0L) minOf(100L, (downloaded * 100L) / totalBytes).toInt() else -1
+                              if (now - lastEmit >= 120L || (pct >= 0 && pct != lastPct)) {
+                                  lastEmit = now
+                                  lastPct = pct
+                                  notifyAshrahWeb("if(window.__ashrahOnUpdateProgress)window.__ashrahOnUpdateProgress($pct,$downloaded,$totalBytes);")
+                              }
+                          }
+                          output.flush()
+                          output.close()
+                          output = null
+
+                          if (!outFile.exists() || outFile.length() < 50000L) {
+                              throw Exception("ملف التحديث غير مكتمل")
+                          }
+
+                          ashrahDownloadedApkFile = outFile
+                          ashrahDownloading = false
+                          val finalSize = outFile.length()
+                          notifyAshrahWeb("if(window.__ashrahOnUpdateProgress)window.__ashrahOnUpdateProgress(100,$finalSize,$finalSize);")
+                          launchAshrahApkInstaller()
+                      } catch (e: Exception) {
+                          ashrahDownloading = false
+                          val safeErr = (e.message ?: "").replace("\\", "").replace("'", "")
+                          notifyAshrahWeb("if(window.__ashrahOnUpdateState)window.__ashrahOnUpdateState('error','$safeErr');")
+                      } finally {
+                          try { input?.close() } catch (_: Exception) {}
+                          try { output?.close() } catch (_: Exception) {}
+                          try { conn?.disconnect() } catch (_: Exception) {}
+                      }
+                  }.start()
+              }
+
+              private fun launchAshrahApkInstaller() {
+                  runOnUiThread {
+                      try {
+                          var apkFile = ashrahDownloadedApkFile
+                          if (apkFile == null || !apkFile.exists()) {
+                              apkFile = java.io.File(java.io.File(cacheDir, "updates"), "Ashrah-update.apk")
+                          }
+                          if (!apkFile.exists()) {
+                              notifyAshrahWeb("if(window.__ashrahOnUpdateState)window.__ashrahOnUpdateState('error','الملف غير موجود');")
+                              return@runOnUiThread
+                          }
+
+                          if (android.os.Build.VERSION.SDK_INT >= 26 && !packageManager.canRequestPackageInstalls()) {
+                              notifyAshrahWeb("if(window.__ashrahOnUpdateState)window.__ashrahOnUpdateState('need_permission','');")
+                              val permIntent = android.content.Intent(
+                                  android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                                  android.net.Uri.parse("package:$packageName")
+                              )
+                              permIntent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                              startActivity(permIntent)
+                              return@runOnUiThread
+                          }
+
+                          val apkUri = androidx.core.content.FileProvider.getUriForFile(
+                              this,
+                              "$packageName.ashrah.fileprovider",
+                              apkFile
+                          )
+                          val installIntent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
+                              setDataAndType(apkUri, "application/vnd.android.package-archive")
+                              addFlags(
+                                  android.content.Intent.FLAG_ACTIVITY_NEW_TASK or
+                                  android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                              )
+                          }
+                          notifyAshrahWeb("if(window.__ashrahOnUpdateState)window.__ashrahOnUpdateState('installing','');")
+                          startActivity(installIntent)
+                      } catch (e: Exception) {
+                          val safeErr = (e.message ?: "").replace("\\", "").replace("'", "")
+                          notifyAshrahWeb("if(window.__ashrahOnUpdateState)window.__ashrahOnUpdateState('error','$safeErr');")
+                      }
+                  }
               }
 
               private fun setupAshrahEdgeToEdgeIfNeeded() {
@@ -408,6 +858,21 @@ jobs:
                   }
 
                   @android.webkit.JavascriptInterface
+                  fun downloadAndInstallApk(url: String?) {
+                      startAshrahApkDownload(url)
+                  }
+
+                  @android.webkit.JavascriptInterface
+                  fun cancelApkDownload() {
+                      ashrahCancelDownload = true
+                  }
+
+                  @android.webkit.JavascriptInterface
+                  fun installDownloadedApk() {
+                      launchAshrahApkInstaller()
+                  }
+
+                  @android.webkit.JavascriptInterface
                   fun getAppBuildCode(): Int {
                       return try {
                           @Suppress("DEPRECATION")
@@ -462,7 +927,7 @@ jobs:
               src = f.read()
 
           if MARKER in src:
-              print(f"ℹ️ جسر AshrahSystemBars (V3) مثبّت بالفعل في {target}")
+              print(f"ℹ️ جسر التحديث الداخلي (V4) مثبّت بالفعل في {target}")
               sys.exit(0)
 
           is_kt = target.endswith(".kt")
@@ -491,42 +956,17 @@ jobs:
           with open(target, "w", encoding="utf-8") as f:
               f.write(src)
 
-          print(f"✅ تم حقن جسر AshrahSystemBars + openExternalUrl بنجاح في {target}")
+          print(f"✅ تم حقن جسر AshrahSystemBars + التحديث الداخلي بنجاح في {target}")
           PYEOF
-      - uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-      - name: Setup Persistent Debug Keystore
-        run: |
-          mkdir -p ~/.android
-          if [ -f ashrah-debug.keystore ]; then
-            cp ashrah-debug.keystore ~/.android/debug.keystore
-            echo "✅ تم استخدام مفتاح التوقيع الثابت للتحديث المباشر."
-          else
-            keytool -genkey -v \
-              -keystore ashrah-debug.keystore \
-              -storepass android \
-              -alias androiddebugkey \
-              -keypass android \
-              -keyalg RSA \
-              -keysize 2048 \
-              -validity 10000 \
-              -dname "CN=Ashrah Debug,O=Ashrah,C=YE"
-            cp ashrah-debug.keystore ~/.android/debug.keystore
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            git add ashrah-debug.keystore
-            git commit -m "chore: save persistent signing keystore [skip ci]"
-            git push origin HEAD
-            echo "✅ تم إنشاء وحفظ مفتاح التوقيع الثابت في المستودع بنجاح."
-          fi
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.7'
       - working-directory: project
         run: gradle assembleDebug --no-daemon
-      - run: cp project/app/build/outputs/apk/debug/app-debug.apk Ashrah-latest.apk
+      - run: |
+          cp project/app/build/outputs/apk/debug/app-debug.apk Ashrah-latest.apk
+          echo "🔐 بصمة شهادة توقيع التطبيق:"
+          keytool -printcert -jarfile Ashrah-latest.apk | grep -E "Owner:|SHA256:" || true
       - uses: actions/upload-artifact@v4
         with:
           name: Ashrah-APK
@@ -536,7 +976,7 @@ jobs:
           tag_name: v${{ steps.ver.outputs.app_ver }}-b${{ github.run_number }}
           name: تطبيق عشرة — الإصدار v${{ steps.ver.outputs.app_ver }} (بناء #${{ github.run_number }})
           body: |
-            إصدار جديد جاهز للتحميل والتحديث المباشر فوق النسخة السابقة.
+            إصدار جديد جاهز للتحميل والتحديث المباشر داخل التطبيق فوق النسخة السابقة.
             - رابط التحميل المباشر الدائم لآخر نسخة:
               https://github.com/${{ github.repository }}/releases/latest/download/Ashrah-latest.apk
           files: Ashrah-latest.apk
