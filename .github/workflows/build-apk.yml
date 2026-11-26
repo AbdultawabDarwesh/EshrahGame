@@ -981,3 +981,23 @@ jobs:
               https://github.com/${{ github.repository }}/releases/latest/download/Ashrah-latest.apk
           files: Ashrah-latest.apk
           make_latest: true
+      - name: Notify App Immediately via Firebase
+        run: |
+          TAG="v${{ steps.ver.outputs.app_ver }}-b${{ github.run_number }}"
+          DL_URL="https://github.com/${{ github.repository }}/releases/download/${TAG}/Ashrah-latest.apk"
+          PAYLOAD=$(printf '{"version":"%s","buildCode":%s,"tag":"%s","downloadUrl":"%s","updatedAt":%s}' \
+            "${{ steps.ver.outputs.app_ver }}" \
+            "${{ github.run_number }}" \
+            "${TAG}" \
+            "${DL_URL}" \
+            "$(date +%s000)")
+          HTTP_CODE=$(curl -s -o /tmp/fb_resp.txt -w "%{http_code}" -X PUT \
+            -H "Content-Type: application/json" \
+            -d "${PAYLOAD}" \
+            "https://eshrah-game-default-rtdb.firebaseio.com/app_meta/latest_release.json" || echo "000")
+          if [ "${HTTP_CODE}" = "200" ]; then
+            echo "🚀 تم بث التحديث الجديد (${TAG}) لحظياً لجميع الأجهزة المتصلة عبر Firebase!"
+          else
+            echo "⚠️ تعذر البث اللحظي عبر Firebase (HTTP ${HTTP_CODE}) — سيعتمد التطبيق على GitHub API كبديل تلقائي."
+            cat /tmp/fb_resp.txt || true
+          fi
